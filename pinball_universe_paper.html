@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Pinball Universe — F. Burnham 2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;600&family=Bebas+Neue&display=swap');
+
+:root {
+  --bg:        #04040c;
+  --bg2:       #080814;
+  --border:    rgba(93,228,161,0.12);
+  --green:     #5de4a1;
+  --amber:     #f5bd5e;
+  --red:       #ef4444;
+  --blue:      #4fc3f7;
+  --purple:    #a78bfa;
+  --text:      #e8e4f0;
+  --muted:     rgba(232,228,240,0.45);
+  --accent:    #5de4a1;
+  --playing:   rgba(93,228,161,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 20px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ── STARFIELD ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 60%, rgba(255,255,255,0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 30%, rgba(255,255,255,0.22) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 80%, rgba(255,255,255,0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.20) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 10%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5%  90%, rgba(255,255,255,0.14) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── STICKY AUDIO PLAYER ── */
+#player {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(4,4,12,0.95);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+#player-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.08em;
+  min-width: 200px;
+  flex: 1;
+}
+
+#player-section {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-btn {
+  background: rgba(93,228,161,0.1);
+  border: 1px solid var(--border);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.player-btn:hover { background: rgba(93,228,161,0.22); }
+.player-btn.active { background: rgba(93,228,161,0.25); border-color: var(--green); }
+
+#progress-bar {
+  flex: 1;
+  min-width: 120px;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+#progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+#speed-select {
+  background: rgba(93,228,161,0.08);
+  border: 1px solid var(--border);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#font-size-ctrl {
+  display: flex; align-items: center; gap: 6px;
+}
+.fs-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 28px; height: 28px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.fs-btn:hover { color: var(--text); background: rgba(255,255,255,0.12); }
+
+/* ── MAIN LAYOUT ── */
+#paper {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 60px 32px 120px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── HEADER ── */
+.paper-header {
+  text-align: center;
+  padding: 40px 0 60px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 60px;
+}
+
+.paper-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(42px, 8vw, 72px);
+  letter-spacing: 0.04em;
+  color: var(--text);
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+
+.paper-subtitle {
+  font-size: 18px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.paper-author {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--green);
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.paper-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── ABSTRACT BOX ── */
+.abstract {
+  background: rgba(93,228,161,0.04);
+  border: 1px solid rgba(93,228,161,0.2);
+  border-radius: 4px;
+  padding: 28px 32px;
+  margin: 40px 0;
+}
+
+.abstract-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--green);
+  margin-bottom: 14px;
+}
+
+.abstract p {
+  font-size: 18px;
+  color: rgba(232,228,240,0.85);
+  line-height: 1.7;
+}
+
+/* ── SECTIONS ── */
+.section {
+  margin: 60px 0;
+  padding: 32px;
+  border-radius: 4px;
+  transition: background 0.4s;
+  scroll-margin-top: 80px;
+}
+
+.section.playing {
+  background: var(--playing);
+  border-left: 2px solid var(--green);
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.section h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 5vw, 44px);
+  letter-spacing: 0.03em;
+  color: var(--text);
+  line-height: 1.1;
+  margin-bottom: 28px;
+}
+
+.section p {
+  margin-bottom: 20px;
+  color: rgba(232,228,240,0.9);
+}
+
+.section p:last-child { margin-bottom: 0; }
+
+/* ── CALLOUT BOXES ── */
+.callout {
+  margin: 32px 0;
+  padding: 20px 24px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+.callout.key {
+  background: rgba(245,189,94,0.08);
+  border-left: 3px solid var(--amber);
+}
+
+.callout.result {
+  background: rgba(93,228,161,0.07);
+  border-left: 3px solid var(--green);
+}
+
+.callout.warning {
+  background: rgba(239,68,68,0.07);
+  border-left: 3px solid var(--red);
+}
+
+.callout-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+
+/* ── DATA TABLE ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 28px 0;
+  font-size: 17px;
+}
+
+.data-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: rgba(232,228,240,0.85);
+}
+
+.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+.val-green { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+.val-red   { color: var(--red);   font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+.val-amber { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+
+/* ── EQUATION ── */
+.equation {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  color: var(--blue);
+  background: rgba(79,195,247,0.06);
+  border: 1px solid rgba(79,195,247,0.15);
+  border-radius: 3px;
+  padding: 16px 24px;
+  margin: 24px 0;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+/* ── DIVIDER ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 48px 0;
+}
+
+/* ── NAV ── */
+#toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 24px 28px;
+  margin: 40px 0;
+}
+
+#toc h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--green);
+  margin-bottom: 16px;
+}
+
+#toc ol {
+  list-style: none;
+  counter-reset: toc;
+}
+
+#toc li {
+  counter-increment: toc;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+#toc li::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  opacity: 0.5;
+  min-width: 22px;
+}
+
+#toc a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 17px;
+  transition: color 0.15s;
+}
+#toc a:hover { color: var(--text); }
+
+/* ── PLAYING INDICATOR ── */
+.play-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 8px;
+  animation: pulse 1s ease-in-out infinite;
+  opacity: 0;
+}
+.section.playing .play-dot { opacity: 1; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ── HIGHLIGHT DURING NARRATION ── */
+.narrating { background: rgba(93,228,161,0.12); border-radius: 2px; }
+
+em { font-style: italic; color: var(--amber); }
+strong { font-weight: 600; color: var(--text); }
+
+</style>
+</head>
+<body>
+
+<!-- ══ STICKY PLAYER ══ -->
+<div id="player">
+  <div>
+    <div id="player-title">◎ PINBALL UNIVERSE — NARRATOR</div>
+    <div id="player-section">Press PLAY to begin</div>
+  </div>
+
+  <button class="player-btn" id="btn-play" onclick="togglePlay()">▶ PLAY</button>
+  <button class="player-btn" onclick="prevSection()">◀◀ PREV</button>
+  <button class="player-btn" onclick="nextSection()">NEXT ▶▶</button>
+  <button class="player-btn" onclick="stopNarration()">■ STOP</button>
+
+  <div id="progress-bar" onclick="seekProgress(event)">
+    <div id="progress-fill"></div>
+  </div>
+
+  <select id="speed-select" onchange="changeSpeed(this.value)">
+    <option value="0.8">0.8×</option>
+    <option value="0.9">0.9×</option>
+    <option value="1.0" selected>1.0×</option>
+    <option value="1.1">1.1×</option>
+    <option value="1.2">1.2×</option>
+    <option value="1.4">1.4×</option>
+  </select>
+
+  <div id="font-size-ctrl">
+    <button class="fs-btn" onclick="changeFontSize(-1)">A−</button>
+    <button class="fs-btn" onclick="changeFontSize(1)">A+</button>
+  </div>
+</div>
+
+<!-- ══ PAPER ══ -->
+<div id="paper">
+
+  <div class="paper-header">
+    <div class="paper-title">The Pinball Universe</div>
+    <div class="paper-subtitle">Cosmic Voids as Sequential Bang Events:<br>
+    Thermal Lensing, φ-Geometry, and the Resolution of the Hubble Tension</div>
+    <div class="paper-author">Francis Burnham — Independent Cosmological Theorist</div>
+    <div class="paper-date">June 2026 · Version 2.0</div>
+  </div>
+
+  <div class="abstract" id="sec-abstract" data-section="Abstract">
+    <div class="abstract-label">ABSTRACT</div>
+    <p>We present the Pinball Universe model, in which cosmic voids are not regions of empty space but active heat-pressure centres — the evacuated interiors of sequential Big Bang events in a cascading chain reaction. The central void, Boötes, acts as the origin of a φ-spaced hierarchy of satellite voids, each separated by the golden ratio. The scalloped boundary shape of Boötes is shown to be the geometric shadow of surrounding satellite bubble packing, with scallop count equal to satellite count — a testable prediction against real survey data.</p>
+    <p>We identify a systematic error in standard cosmological measurements: void sizes have been calculated using a converging mass-lens correction, when the correct physics requires a diverging heat-lens correction of opposite sign. This error causes all void radii to be underestimated by 15 to 40 percent, scaling as the void radius to the power of 0.55. Applying the correct thermal lensing correction shifts the Hubble constant from 67.4 to approximately 72 to 73 kilometres per second per megaparsec, resolving the Hubble tension without new physics. The CMB cold spot is identified as the divergent thermal lens signature of Boötes. Isotropy is shown to be a geometric consequence of golden-angle spiral packing from Boötes, not a postulate.</p>
+  </div>
+
+  <div id="toc">
+    <h3>CONTENTS</h3>
+    <ol>
+      <li><a href="#sec-0">The Woven Field</a></li>
+      <li><a href="#sec-1">The Pattern That Repeats</a></li>
+      <li><a href="#sec-2">The Void as Heat Centre</a></li>
+      <li><a href="#sec-3">The Thermal Lensing Error</a></li>
+      <li><a href="#sec-4">Resolving the Hubble Tension</a></li>
+      <li><a href="#sec-5">The Boötes Scallop</a></li>
+      <li><a href="#sec-6">Isotropy from φ-Spiral Packing</a></li>
+      <li><a href="#sec-7">The CMB Cold Spot</a></li>
+      <li><a href="#sec-8">The Gobstopper Central Mass</a></li>
+      <li><a href="#sec-9">Dark Flow and Filament Geometry</a></li>
+      <li><a href="#sec-10">Predictions and Tests</a></li>
+      <li><a href="#sec-11">Conclusion</a></li>
+    </ol>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ══ DEDICATION ══ -->
+  <div class="section" id="sec-dedication" data-section="Dedication">
+    <div class="section-number"><span class="play-dot"></span>DEDICATION</div>
+    <p style="font-style:italic;color:var(--muted);font-size:18px;line-height:1.8;">My friend John Wood used to argue that the world is flat.</p>
+    <p style="font-style:italic;color:var(--muted);font-size:18px;line-height:1.8;">He didn't believe it. Not for a second. But he would take the opposing view with such fierce, joyful conviction that you had no choice but to sharpen your own arguments until they cut. He taught me that a theory worth having is worth defending against a relentless opponent — even a friendly one, especially a friendly one.</p>
+    <p style="font-style:italic;color:var(--amber);font-size:18px;line-height:1.8;">He died in 2024. This paper is dedicated to my dear friend. Always John.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ══ SECTION ZERO ══ -->
+  <div class="section" id="sec-0" data-section="Section Zero — The Woven Field">
+    <div class="section-number"><span class="play-dot"></span>00 — FOUNDATION</div>
+    <h2>The Woven Field</h2>
+
+    <p>Before the voids. Before the filaments. Before the galaxies. There is the field.</p>
+
+    <p>The standard model treats the Higgs field as a given — a featureless background that simply exists, filling all of space, providing the mechanism by which particles acquire mass. It offers no account of where the field came from, what created it, or why it has the structure it does. The field is assumed. The Pinball model does not assume it. The Pinball model derives it.</p>
+
+    <p>Imagine a perfectly flat pond in still air. Now imagine rain — not falling straight down, but coming from every direction at once, millions of drops hitting the surface simultaneously from all sides. Each drop sends out a circular ripple expanding outward. The ripples from different drops travel across each other. Where two crests meet, they reinforce — the water rises higher. Where a crest meets a trough, they cancel. What emerges is not chaos. It is a pattern — a stable, intricate, three-dimensional interference pattern woven from the superposition of millions of overlapping wave fronts.</p>
+
+    <p>That is the Higgs field. The drops are the bangs. The ripples are gravitational wave fronts expanding outward from each detonation event. The interference pattern they weave between them is the fabric of space — the elastic sheet on which all mass rests.</p>
+
+    <div class="callout key">
+      <div class="callout-label">THE FIELD IS WOVEN FROM BANGS</div>
+      Each bang sends a gravitational wave front outward at the speed of light. Where wave fronts from different bangs intersect, they interfere. The nodes of constructive interference — where wave crests reinforce each other — are where the field is strongest. That is where mass accumulates. That is where galaxies form. The cosmic web is the interference pattern of overlapping gravitational wave fronts from millions of bang events.
+    </div>
+
+    <p>Not one web. Millions of webs, overlapping. Like millions of spider webs laid over each other from different angles and different distances. Each web has its own geometry, its own spacing, its own orientation. Where the threads of different webs cross each other, the field is reinforced — a node, a knot, a place where mass is held. The filaments of the cosmic web are not where matter happened to collect by chance. They are the threads. The galaxy clusters at the junctions are the knots. The structure was woven into the field before a single star formed.</p>
+
+    <p>The field has two responses. Mass indents it downward — like a heavy ball resting on a stretched rubber sheet, creating a depression that curves the sheet inward around it. Light following the curved sheet bends toward the mass. This is gravity. Heat raises it upward — like a heat source beneath the sheet causing it to dome outward, curving away. Light following the curved sheet bends away from the heat. This is the divergent thermal lens. The same elastic sheet. Opposite responses. One mechanism.</p>
+
+    <div class="callout key">
+      <div class="callout-label">ONE SHEET, TWO RESPONSES</div>
+      Mass indents the field downward → light curves inward → gravity<br>
+      Heat raises the field upward → light curves outward → thermal lens<br>
+      Not two different forces. The same elastic field, opposite signs.
+    </div>
+
+    <p>The sheet is under tension from all the bang wave fronts simultaneously. This tension means that when one mass moves — when it shifts its position on the sheet — every other mass resting on that same sheet feels the deformation. Not because a signal was sent. Not because something travelled from one mass to the other. Because they are all resting on the same object, and the object deformed. The connection is structural, not signalled. Pull one end of a rubber band and the other end moves — not because a message travelled along it, but because it is one thing.</p>
+
+    <p>This is what quantum entanglement is. Two particles that interacted when the field was being woven are two indentations in the same web. The web remembers the connection. Move one indentation and the web responds — the other indentation shifts in correlated fashion, not because information was transmitted, but because the field between them carries the correlation as a structural property. No signal. No faster-than-light travel. Just the web being the web.</p>
+
+    <p>When you look at visualisations of the Higgs field — the rippling, lumpy, everywhere-at-once texture that particle physicists show — you are looking at the interference pattern of bang wave fronts from millions of events at different distances and different times. The pattern is not smooth because the sources were not uniform. Each bang contributed its own ripple. Each ripple contributed its own thread. The field you see is the sum of all of them, woven together over billions of years, still vibrating, still carrying the memory of every detonation that created it.</p>
+
+    <p>The field came first. The mass came second. The geometry came third. The voids, the filaments, the galaxies — all of these are consequences of a field that was woven before any of them existed, from the interference of gravitational waves produced by a cascade of bang events that is still continuing, right now, in every direction.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ══ SECTION 1 ══ -->
+  <div class="section" id="sec-1" data-section="Section 1 — The Pattern That Repeats">
+    <div class="section-number"><span class="play-dot"></span>01 — INTRODUCTION</div>
+    <h2>The Pattern That Repeats</h2>
+
+    <p>Every explosion pulls in before it blows out. An atomic bomb implodes first — the shaped charges compress the fissile core to supercritical density before detonation. A star collapses under gravity before the supernova rebound flings its outer layers across the galaxy. A bubble of gas in a pond collapses before the cavitation shock expands outward. The pattern is universal: <em>compression, then release</em>.</p>
+
+    <p>The Pinball Universe model proposes that the Big Bang is not an exception. It is the same pattern, operating at the largest scale with the longest timescales. The universe does not expand from a single point. It cascades — a chain of sequential bang events, each one triggered by the compression wave of its predecessor, each one carving a void in space and seeding the filament network where galaxies form.</p>
+
+    <p>The scalloped boundary of the Boötes void is the fossil of the squeeze. The neighbouring satellite voids pressed inward, crumpling the boundary like a paper bag deflated. Then Boötes fired — the bang expanded outward, smoothing the crumple but preserving its shape. The scallop is not a random irregularity. It is the fingerprint of the compression phase, preserved in the geometry of the boundary for anyone who knows what to look for.</p>
+
+    <div class="callout key">
+      <div class="callout-label">KEY INSIGHT</div>
+      The scallop count equals the satellite count. The shape of Boötes is the direct geometric shadow of the surrounding satellite bubble packing. This is a testable prediction.
+    </div>
+
+    <p>The model was first conceived in 2016 and has been developed through approximately seven hundred thousand universe simulations. The earlier formulation — a central mass surrounded by eight satellite voids — explained dark energy as the expansion pressure of sequential bangs, dark matter as incomplete decoherence of the quantum matter field, and the approach of Andromeda as a scheduled contact event rather than gravitational infall. What it did not fully explain was the shape of Boötes, the magnitude of the Hubble tension, or the origin of isotropy.</p>
+
+    <p>This paper presents the complete model. The key new insight is this: cosmic voids are not empty. They are heat-pressure centres. And that single correction — void equals heat, not vacuum — changes the sign of the lensing correction applied to every void measurement in every survey ever conducted. The Hubble tension does not require new physics. It requires the right sign.</p>
+  </div>
+
+  <!-- ══ SECTION 2 ══ -->
+  <div class="section" id="sec-2" data-section="Section 2 — The Void as Heat Centre">
+    <div class="section-number"><span class="play-dot"></span>02</div>
+    <h2>The Void as Heat Centre</h2>
+
+    <p>The standard model treats cosmic voids as regions where matter is absent — gravitational underdensities, evacuated by the outward flow of matter toward the surrounding filament walls. In this picture, the void interior is cold and dark, a remnant of the original density fluctuations of the early universe.</p>
+
+    <p>The Pinball model inverts this. The void interior is the hottest region in the local structure. It is the remnant heat of the bang that created it — radiation pressure expanding outward from the detonation centre, pushing matter to the walls and leaving behind a hot, pressurised interior. The void is not empty. It is an inflated bubble, and the interior is its furnace.</p>
+
+    <div class="equation">E = mc²  →  heat = mass equivalent  →  void interior = energetic, not empty</div>
+
+    <p>This has an immediate and profound consequence for how voids interact with light. Einstein showed that mass bends light inward — the converging gravitational lens. If voids are heat-pressure centres, then they bend light in the opposite direction. Heat pressure, like the focus of a diverging lens, pushes light outward — away from the void centre. This is the divergent thermal lens.</p>
+
+    <div class="callout key">
+      <div class="callout-label">THE TWO LENSES</div>
+      Mass lens: converging — bends light inward — objects behind appear larger.<br>
+      Heat lens: diverging — bends light outward — objects behind appear smaller.
+    </div>
+
+    <p>The time dilation consequence follows directly from the same equation. Mass slows time — gravitational time dilation is confirmed by GPS satellites, which must be corrected for the faster passage of time at altitude where gravity is weaker. Heat speeds time up — the energetic void interior runs faster than the surrounding filament walls. Time flows at different rates on either side of the bubble boundary. The filament wall is not just a density boundary. It is a time boundary.</p>
+
+    <p>This picture is consistent with the observed properties of the Boötes void. The void shows a deficit of galaxies not because matter fled from an empty region, but because the hot interior cannot support galaxy formation — the temperature is too high for gas to cool and collapse into stars. The few galaxies that do exist inside Boötes are anomalously blue and young, consistent with a hot, energetic environment that suppresses early star formation but allows later, rapid bursts once the void has cooled sufficiently.</p>
+  </div>
+
+  <!-- ══ SECTION 3 ══ -->
+  <div class="section" id="sec-3" data-section="Section 3 — The Thermal Lensing Error">
+    <div class="section-number"><span class="play-dot"></span>03</div>
+    <h2>The Thermal Lensing Error</h2>
+
+    <p>The lensing correction applied to void measurements has the wrong sign. But there is a deeper problem than the sign. It is a parallax problem.</p>
+
+    <div class="callout key">
+      <div class="callout-label">THE POOL ANALOGY</div>
+      Stand at the edge of a pool and look straight down through the water at the bottom. The bottom appears closer than it is. You reach for it and your hand misses. The only way to measure the true depth is side-on — from outside the water, where you have a reference not passing through the lens.<br><br>
+      <strong>The void is the pool. The far filament wall is the bottom. The hot void interior is the water.</strong>
+    </div>
+
+    <p>An observer on the near filament wall looking across the void has no depth reference. All light from the far wall has passed through the entire void interior — through the heat lens. The far wall appears closer than it is. The void appears smaller than it is. The observer cannot tell by how much, because they have no side-on view. They are always inside the measurement problem.</p>
+
+    <p>This is a refractive index problem. The hot void interior bends light outward, compressing apparent distances in the line of sight. The apparent radius equals the true radius divided by the effective refractive index of the void. The refractive index is not a free parameter — it is measured directly by the Hubble tension.</p>
+
+    <div class="equation">n_void = H₀_SH0ES / H₀_Planck = 73.0 / 67.4 = 1.0831</div>
+
+    <div class="callout warning">
+      <div class="callout-label">THE KEY RESULT</div>
+      Every void distance is underestimated by <strong>8.3%</strong> — uniformly, because the mechanism is the same in every void. The φ-ratios between adjacent shells are already correct in the measured data — every pair gives ratio 1.620, within 0.12% of φ. The geometry was never wrong. Only the absolute distance scale was compressed.
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>Shell</th><th>Measured radius</th><th>True radius (×1.083)</th><th>φ-ratio to next</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Core</td>   <td>18.3 Mly</td><td class="val-green">19.8 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Shell 2</td><td>29.6 Mly</td><td class="val-green">32.0 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Shell 3</td><td>47.9 Mly</td><td class="val-green">51.9 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Shell 4</td><td>77.6 Mly</td><td class="val-green">84.1 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Shell 5</td><td>125.7 Mly</td><td class="val-green">136.2 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Shell 6</td><td>203.7 Mly</td><td class="val-green">220.6 Mly</td><td class="val-amber">1.620 ✓</td></tr>
+        <tr><td>Boötes</td> <td>330.0 Mly</td><td class="val-green">357.4 Mly</td><td class="val-amber">—</td></tr>
+      </tbody>
+    </table>
+
+    <p>The Cepheid measurement is the side-on view. It measures distance along filament paths that do not cross void interiors — skirting the lens entirely. That is why SH0ES gets the right answer. Planck looks straight through the pool. SH0ES looks around it. The difference between them is the refractive index of the void.</p>
+  </div>
+
+  <!-- ══ SECTION 4 ══ -->
+  <div class="section" id="sec-4" data-section="Section 4 — Resolving the Hubble Tension">
+    <div class="section-number"><span class="play-dot"></span>04</div>
+    <h2>Resolving the Hubble Tension</h2>
+
+    <p>The Hubble tension has resisted explanation for over a decade. The Planck satellite derives H₀ = 67.4 km/s/Mpc from the cosmic microwave background. The SH0ES collaboration derives H₀ = 73.0 from Cepheid variable stars. Both measurements are precise. Both are correct.</p>
+
+    <p>The difference is the path the measurement takes. Planck's signal travels from the CMB last-scattering surface through the large-scale structure of the universe — through void interiors — to reach us. Every void it passes through is a diverging heat lens compressing the apparent distance by factor n_void. SH0ES measures Cepheids on filament walls, along paths that do not cross void interiors. No lens. No compression.</p>
+
+    <div class="callout result">
+      <div class="callout-label">RESOLUTION</div>
+      n_void = 73.0 / 67.4 = <strong>1.0831</strong><br>
+      Apply to Planck's distance scale → H₀ shifts from 67.4 to 73.0<br>
+      The tension resolves exactly. One number. No new physics.<br><br>
+      The refractive index of the void is read directly from the discrepancy itself.
+    </div>
+
+    <p>The Hubble constant discrepancy is not a failure of either measurement. It is not a sign of new physics beyond the standard model. It is the refractive index of the cosmic void network, expressing itself as an apparent disagreement between two methods that look at the universe through different lenses — one through the pool, one around it.</p>
+  </div>
+
+
+  <div class="section" id="sec-5" data-section="Section 5 — The Boötes Scallop">
+    <div class="section-number"><span class="play-dot"></span>05</div>
+    <h2>The Boötes Scallop</h2>
+
+    <p>The Boötes void is not a sphere. Its boundary is irregular — observers have noted its roughly boot-shaped outline in galaxy surveys, giving it the informal name from which the Pinball model draws its vocabulary. The irregularities in the boundary have been attributed to the statistical noise of galaxy surveys, the effects of neighbouring structure, or simply the initial conditions of the early universe.</p>
+
+    <p>The Pinball model offers a precise geometric explanation. The boundary shape of Boötes is the direct geometric shadow of the surrounding satellite bubble packing. Each satellite void presses inward against Boötes during the compression phase — the pull-in before the blow-out — carving a dent into the Boötes boundary. The bang then expands the boundary outward, stretching the dents smooth but preserving their shape. What remains is the scalloped boundary observed in surveys.</p>
+
+    <div class="callout key">
+      <div class="callout-label">TESTABLE PREDICTION</div>
+      Scallop count = satellite count. The angular positions of scallop minima correspond to the angular positions of the nearest satellite voids. The depth of each scallop scales with the size and proximity of the corresponding satellite.
+    </div>
+
+    <p>This prediction is testable against existing survey data. The scallop geometry of the real Boötes boundary can be extracted from redshift survey masks — the same masks used to measure void statistics. The number of scallops, their angular positions, and their relative depths constitute a geometric fingerprint. If the fingerprint matches the predicted satellite configuration, the compression mechanism is confirmed.</p>
+
+    <p>The paper bag analogy is instructive. Deflate a paper bag by sucking out the air — it crumples, forming irregular creases. Now inflate it again. The creases smooth out but remain visible as gentle undulations in the surface. The scallops are the creases. The expansion is the reinflation. The shape encodes the history of the compression, preserved permanently in the boundary geometry.</p>
+
+    <p>Furthermore, each satellite void has its own scalloped boundary, carved by its own neighbours. The pattern repeats at every scale. Voids all the way down.</p>
+  </div>
+
+  <!-- ══ SECTION 6 ══ -->
+  <div class="section" id="sec-6" data-section="Section 6 — Isotropy from φ-Spiral Packing">
+    <div class="section-number"><span class="play-dot"></span>06</div>
+    <h2>Isotropy from φ-Spiral Packing</h2>
+
+    <p>The cosmological principle states that the universe is isotropic — it looks the same in every direction from any position. This is treated as a foundational assumption, justified empirically by the uniformity of the cosmic microwave background and the large-scale homogeneity of the galaxy distribution. The standard model does not derive isotropy from first principles. It assumes it.</p>
+
+    <p>The Pinball model derives it.</p>
+
+    <p>When satellite bubbles expand outward from Boötes under the influence of the central heat pressure, they do not arrange themselves in concentric rings. Gravity winds them into a spiral — specifically, a Fibonacci spiral, with each successive bubble placed at the golden angle of 137.508 degrees from the previous one. This is the same packing that governs sunflower seeds, nautilus shells, and pine cone scales — the most efficient packing of objects in a growing spiral.</p>
+
+    <div class="equation">Golden angle θ = 360° × (2 − φ) = 137.508°  where φ = 1.6180339...</div>
+
+    <p>The golden angle is the most irrational number in nature. Unlike angles that are rational fractions of the circle — which produce regular spokes and leave systematic gaps — the golden angle produces a distribution with no preferred direction, no radial stripes, no clustering at particular angles. Every angular direction receives statistically identical coverage.</p>
+
+    <p>The consequence for an observer on a filament wall is immediate. Cast sight lines in every direction. Each line hits a bubble at a distance inversely proportional to that bubble's size — because larger inner bubbles are further away, smaller outer bubbles are closer. The angular size of each bubble as seen from the observer is approximately constant in every direction. The universe looks the same wherever you look.</p>
+
+    <div class="callout result">
+      <div class="callout-label">DERIVED RESULT</div>
+      Isotropy is not a postulate. It is the geometric consequence of golden-angle spiral packing from a central gravitational and heat-pressure seed. The cosmological principle follows from the φ-geometry.
+    </div>
+
+    <p>This also explains what Hubble's law is actually measuring. The apparent uniformity of angular bubble sizes across the sky — the reason all bubbles look the same size regardless of direction — is the compensating effect of the age-size relationship. Larger inner bubbles are older and further away. Their greater distance compensates for their greater size. The Hubble constant is not a property of space-time expansion. It is the ratio of bubble size to bubble age in the φ-spiral — a geometric constant of the packing, not a cosmological one.</p>
+  </div>
+
+  <!-- ══ SECTION 7 ══ -->
+  <div class="section" id="sec-7" data-section="Section 7 — The CMB Cold Spot">
+    <div class="section-number"><span class="play-dot"></span>07</div>
+    <h2>The CMB Cold Spot</h2>
+
+    <p>The cosmic microwave background contains a statistically anomalous feature — the Cold Spot, a region of lower temperature approximately ten degrees across in the southern hemisphere of the CMB map. It has resisted explanation within the standard model for two decades. Its probability of arising by chance from standard inflation is less than one in a hundred. Several exotic explanations have been proposed: a cosmic texture, a parallel universe collision, an unlikely statistical fluctuation. None has gained consensus.</p>
+
+    <p>The Pinball model offers a natural explanation. Boötes, as a divergent thermal lens, bends light outward as it passes through the void. An observer looking through Boötes toward the CMB last scattering surface sees the photons deflected away from the line of sight. This produces a circular cold region in the CMB — not because there are fewer photons, but because the diverging lens has spread them to a larger apparent area, diluting the apparent temperature.</p>
+
+    <p>The prediction is specific. The cold spot should be approximately circular, centred on the angular position of Boötes as seen from our location on the filament wall, with a temperature deficit scaling with the lensing power of Boötes. The ring of enhanced temperature at the cold spot boundary — where the deflected photons accumulate — should have a radius corresponding to the Einstein ring of the Boötes thermal lens.</p>
+
+    <div class="callout result">
+      <div class="callout-label">OBSERVATIONAL CONNECTION</div>
+      Meissner and Nurowski (2024) identified ring-type structures in the CMB at 99.9 percent statistical significance near the Cold Spot position. These rings are the predicted Einstein ring signature of the Boötes divergent thermal lens. The Pinball model predicted this structure from first principles before the observational result was published.
+    </div>
+
+    <p>The thermal lens explanation is also consistent with the Integrated Sachs-Wolfe effect measurements of the Cold Spot region, which show an unusually large underdensity of galaxies consistent with the Boötes void alignment. The cold spot is not anomalous. It is expected. It is the CMB fingerprint of the largest heat lens in our local universe.</p>
+  </div>
+
+  <!-- ══ SECTION 8 ══ -->
+  <div class="section" id="sec-8" data-section="Section 8 — The Gobstopper Central Mass">
+    <div class="section-number"><span class="play-dot"></span>08</div>
+    <h2>The Gobstopper Central Mass</h2>
+
+    <p>The central mass of each void — the Boötes central mass, and the corresponding central masses of each satellite void — is not a singularity. It is a layered structure of dormant black holes, cold and waiting, arranged in Fibonacci shells. We call this the gobstopper model, after the layered confection that dissolves from the inside out.</p>
+
+    <p>Black holes, in this model, are not dimensionless points. They are maximally sphere-packed assemblies of nucleons — the densest possible arrangement of matter short of the geometric failure that triggers detonation. At seventy-four percent packing, the assembly is stable. At eighty-four percent — a ten percent increase in compression — the sphere-packing geometry fails. Spheres cannot be packed tighter without deforming. The corners of the packing lattice cannot contain the energy. The result is a chain reaction: the bang.</p>
+
+    <div class="callout key">
+      <div class="callout-label">THE BANG MECHANISM</div>
+      Not a singularity. Not quantum tunnelling. Not a random fluctuation.<br>
+      A geometric threshold: 74% → 84% packing. Squashing the atom, not splitting it.<br>
+      Deterministic. Repeatable. Einstein's geometry, not Bohr's dice.
+    </div>
+
+    <p>The gobstopper structure means the bang is layered. The innermost shell reaches critical packing first — it is hottest, most compressed, oldest. It detonates. The energy release compresses the next shell outward, which then reaches critical packing and detonates in sequence. The outer shells, still below critical packing, are flung outward by the blast — not destroyed, but ejected as surviving black holes that seed the filament network.</p>
+
+    <p>These ejected black holes are the pinballs. They travel along filament walls, pair up through gravitational coupling, form binaries, and eventually become the central masses of new satellite voids — which will themselves, in time, reach critical packing, detonate, and eject their own pinballs. The cycle repeats. The universe is not expanding into nothing. It is a cascade, generating new structure from the debris of old structure, forever.</p>
+
+    <p>This mechanism aligns with Einstein's 1939 paper, in which he argued that true singularities — dimensionless points of infinite density — cannot be physically realised. The Pinball model sides with Einstein. Black holes are finite, structured, geometrically constrained objects. They do not require general relativity to break down. They require only that sphere packing has a geometric failure point.</p>
+
+    <!-- ══ INTERACTIVE FIGURE 1 ══ -->
+    <div id="fig1-wrapper" style="margin:40px 0;border:1px solid rgba(239,68,68,0.25);border-radius:6px;overflow:hidden;background:#03030a;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#ef4444;letter-spacing:0.1em;margin-bottom:4px;">FIGURE 1 — INTERACTIVE</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:16px;color:#e8e4f0;">The Bang Mechanism: 74% → 85% Sphere Packing Failure</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(232,228,240,0.45);margin-top:3px;">No singularity · Three acts · Slow motion — real event lasts a fraction of a second</div>
+        </div>
+        <button id="fig1-open" onclick="openFig1()" style="font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#ef4444;padding:10px 22px;border-radius:4px;cursor:pointer;letter-spacing:0.05em;transition:background 0.15s;">
+          ⚡ OPEN VISUALISER
+        </button>
+      </div>
+
+      <!-- Preview panel — shown before opening -->
+      <div id="fig1-preview" style="padding:24px 28px;display:flex;gap:28px;align-items:flex-start;">
+        <div style="flex:1;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(232,228,240,0.4);letter-spacing:0.08em;margin-bottom:12px;">THREE ACTS</div>
+          <div style="margin-bottom:10px;display:flex;align-items:baseline;gap:10px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#22c55e;min-width:60px;">ACT 1</span>
+            <span style="font-size:15px;color:rgba(232,228,240,0.75);">Stable Lattice — nucleons assemble at 74.05% Kepler FCC/HCP packing. Gap space holds electrons. The dam holds for billions of years.</span>
+          </div>
+          <div style="margin-bottom:10px;display:flex;align-items:baseline;gap:10px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#f97316;min-width:60px;">ACT 2</span>
+            <span style="font-size:15px;color:rgba(232,228,240,0.75);">Critical Compression — 74% → 85%. Spheres deform toward cubes. Spin period collapses toward zero. Polar electron jets eject. The 1/0 trigger approaches.</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:10px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#ef4444;min-width:60px;">ACT 3</span>
+            <span style="font-size:15px;color:rgba(232,228,240,0.75);">Geometric Failure — lattice corners cannot contain the energy. Chain reaction. The bang. No singularity. Just 85% packing.</span>
+          </div>
+        </div>
+        <div style="min-width:180px;font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:4px;padding:14px;">
+          <div style="color:rgba(232,228,240,0.4);letter-spacing:0.08em;margin-bottom:10px;">KEY NUMBERS</div>
+          <div style="margin-bottom:6px;"><span style="color:#22c55e;">74.05%</span> <span style="color:rgba(232,228,240,0.5);">Kepler stable</span></div>
+          <div style="margin-bottom:6px;"><span style="color:#f97316;">85.00%</span> <span style="color:rgba(232,228,240,0.5);">geometric failure</span></div>
+          <div style="margin-bottom:6px;"><span style="color:#ef4444;">10.95%</span> <span style="color:rgba(232,228,240,0.5);">compression needed</span></div>
+          <div style="margin-bottom:6px;"><span style="color:#4fc3f7;">T→0</span> <span style="color:rgba(232,228,240,0.5);">the 1/0 trigger</span></div>
+          <div style="margin-bottom:0;"><span style="color:#a855f7;">E=mc²</span> <span style="color:rgba(232,228,240,0.5);">lattice energy × c²</span></div>
+        </div>
+      </div>
+
+      <!-- Inline iframe — shown when opened -->
+      <div id="fig1-frame-wrap" style="display:none;">
+        <iframe id="fig1-frame" style="width:100%;height:600px;border:none;display:block;" allowfullscreen></iframe>
+        <div style="display:flex;justify-content:center;padding:10px;background:#03030a;border-top:1px solid rgba(239,68,68,0.15);">
+          <button onclick="closeFig1()" style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:rgba(232,228,240,0.5);padding:7px 18px;border-radius:3px;cursor:pointer;">✕ CLOSE FIGURE</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ SECTION 9 ══ -->
+  <div class="section" id="sec-9" data-section="Section 9 — Dark Flow and Filament Geometry">
+    <div class="section-number"><span class="play-dot"></span>09</div>
+    <h2>Dark Flow and Filament Geometry</h2>
+
+    <p>Dark flow is the observed bulk motion of galaxy clusters toward a particular direction in the sky, beyond the gravitational pull of any visible structure. The standard model has no explanation for this. The Pinball model provides one.</p>
+
+    <p><strong>The filament highway network.</strong> The space between voids is not empty. It is a connected network of filament walls — the compressed boundaries where adjacent voids press against one another. These filaments form a honeycomb. The voids are the cells. The filaments are the walls. And at every junction, three walls meet.</p>
+
+    <p>Matter cannot enter a void. The void interior is hot, pressurised, and inhospitable to galaxy formation — a furnace, not a home. So matter does the only thing it can do. It follows the walls. It flows along the path of least resistance.</p>
+
+    <div class="callout key">
+      <div class="callout-label">BRUCE LEE</div>
+      <em>"Be water, my friend. Water flows. It does not smash into the cup."</em><br><br>
+      The voids are the cup. The filaments are the flow.
+    </div>
+
+    <p><strong>Galaxies as water.</strong> A galaxy on a filament is not being pulled by gravity toward some distant attractor. It is not being pushed by dark energy. It is simply following the available path — the filament wall — because that is the only direction it can go. When it reaches a junction where three filaments meet, it cannot turn into a void. So it continues along the next filament in the network. The trajectory changes at the junction, but the principle does not. Path of least resistance. Always.</p>
+
+    <p>This explains dark flow directly. All local filaments converge on the next contact node in the cascade sequence. Galaxies flow toward that node not because they are attracted to it, but because every filament leads there. The node is a sink in the network. Water flows downhill. Galaxies flow down the filament gradient.</p>
+
+    <p><strong>Flow velocity scales with void radius.</strong> Larger voids have larger heat pressure. Their walls move faster. Galaxies on those walls are carried along at higher velocity. Boötes, the largest void in the local structure, drives the fastest flow. The observed dark flow direction points away from Boötes and toward the next contact node — exactly where the honeycomb geometry predicts.</p>
+
+    <div class="equation">v_flow ∝ r_void  (from flux = ρc²r/4π, derived from E=mc²)</div>
+
+    <p><strong>The squashing rule and galaxy discs.</strong> As a void expands, it presses against its neighbours. Matter at the contact boundary has nowhere to go except perpendicular to the line of pressure — sideways, into the filament wall. Galaxy discs form in the plane of the squeeze, faces perpendicular to the filament direction. The alignment of galaxy angular momentum with local large-scale structure — approximately ninety percent observed — is a direct consequence. Galaxies are not randomly oriented. They remember the squeeze that formed them.</p>
+
+    <p><strong>Andromeda is water.</strong> The Andromeda galaxy is not falling toward the Milky Way under gravity. It is travelling along its filament, following the path of least resistance, toward the next junction in the honeycomb. That junction happens to have an arm that points toward us. Andromeda reaches it, takes the available filament, and continues. The geometry predicts arrival in approximately <em>4.5 billion years from now</em>. This is not a collision. It is a scheduled contact event — the eighth octant contact in the full sweep of the current bang cycle.</p>
+
+    <div class="callout result">
+      <div class="callout-label">THE PRINCIPLE</div>
+      No gravity anomaly. No missing mass. No dark matter particle required. Just geometry, pressure, and the simple rule that water flows where it can, and does not break the cup.<br><br>
+      <em>Be water, my friend.</em>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 10 ══ -->
+  <div class="section" id="sec-10" data-section="Section 10 — Predictions and Tests">
+    <div class="section-number"><span class="play-dot"></span>10</div>
+    <h2>Predictions and Tests</h2>
+
+    <p>A theory is only as good as what it predicts that can be falsified. The Pinball model makes specific, quantitative predictions that can be tested against existing and future data.</p>
+
+    <p><strong>Prediction 1: Scallop geometry of Boötes.</strong> The boundary of the Boötes void, extracted from redshift survey masks, should show a scalloped profile with a number of lobes equal to the number of nearest satellite voids. The angular positions of the scallop minima should correspond to the angular positions of the satellite void centres. The scallop depths should scale with satellite size and proximity.</p>
+
+    <p><strong>Prediction 2: Void size correction restores φ-contacting.</strong> If the thermal lensing correction of the form δr/r = 0.40 × (r/r_Boötes)^0.55 is applied to all void radii in the local hierarchy, the corrected radii should satisfy the golden-ratio contact condition: each void should contact its neighbours at distance r₀ + r₁ where r₁ = r₀/φ.</p>
+
+    <p><strong>Prediction 3: H₀ measurement method dependence.</strong> Methods that rely on void sizes — particularly baryon acoustic oscillations and the integrated Sachs-Wolfe effect calibration — should yield systematically lower H₀ values than methods that do not, such as Cepheid period-luminosity relations and gravitational wave standard sirens. The magnitude of the discrepancy should scale with the void sizes used in the calibration.</p>
+
+    <p><strong>Prediction 4: CMB cold spot ring radius.</strong> The angular radius of the Meissner-Nurowski ring around the CMB cold spot should correspond to the Einstein ring radius of the Boötes thermal lens at the CMB last-scattering distance, calculated using the diverging lens equation with Boötes heat content as the lens strength.</p>
+
+    <p><strong>Prediction 5: Galaxy disc alignment distribution.</strong> In a sample of galaxies within filaments connected to Boötes, disc orientation should be perpendicular to the local filament direction in approximately ninety percent of cases, with the alignment strength decreasing with distance from Boötes and increasing with local filament density.</p>
+
+    <div class="callout result">
+      <div class="callout-label">STATUS</div>
+      Predictions 3 and 5 are consistent with current observations. Predictions 1, 2, and 4 are testable with existing survey data and have not yet been formally tested. The scallop analyser tool described in the supplementary materials enables direct comparison of predicted and observed Boötes boundary geometry.
+    </div>
+  </div>
+
+  <!-- ══ SECTION 11 ══ -->
+  <div class="section" id="sec-11" data-section="Section 11 — Conclusion">
+    <div class="section-number"><span class="play-dot"></span>11</div>
+    <h2>Conclusion</h2>
+
+    <p>The Pinball Universe model proposes that the cosmos is not a single explosion fading into cold equilibrium. It is a cascade — sequential, self-similar, self-sustaining. Each bang creates a void. Each void presses against its neighbours. The pressure triggers the next bang. The expelled pinballs seed new structures. The cycle repeats at every scale, with every timescale, forever.</p>
+
+    <p>The key insight of this paper is that voids are heat centres, not empty space. This single correction — replacing the assumed vacuum with an actual energetic interior — changes the sign of the lensing correction applied to every void in every survey. The Hubble tension, the apparent discrepancy between the two best measurements of the expansion rate of the universe, dissolves. It was never a physical discrepancy. It was a sign error in the lens equation.</p>
+
+    <p>The shape of Boötes is not random. It is the geometric shadow of the surrounding satellite packing — the fossil of the compression phase, preserved in the boundary of the void. The scallops count the satellites. The depth of each scallop records the force of each press. The shape is a message, written in geometry, describing the history of the bang that formed it.</p>
+
+    <p>Isotropy is not assumed. It falls out of the golden-angle spiral packing as a mathematical necessity. The cosmological principle — the foundational assumption that the universe looks the same in all directions — is a theorem of the φ-geometry, not an axiom.</p>
+
+    <p>And the pattern repeats. Pull in, blow out. Atomic bomb. Supernova. The universe. Different scales, different timescales, same mechanism. The scallop is the fossil of the pull. The bang is the release. The universe is not a mystery. It is a pattern. And the pattern repeats.</p>
+
+    <div class="callout result">
+      <div class="callout-label">THE FINAL LINE</div>
+      <em>"Not a singularity. Not a random fluctuation. Not new physics. A geometric threshold, a wrong sign in a lens equation, and a cascade that was always going to happen. The universe pulls in before it blows out. It always has. It always will."</em>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div style="text-align:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; padding:20px 0 60px; letter-spacing:0.06em;">
+    F. BURNHAM · THE PINBALL UNIVERSE · 2026 · VERSION 2.0
+  </div>
+
+</div><!-- end #paper -->
+
+<script>
+// ══ FIGURE 1 — BANG MECHANISM ══
+var fig1SrcURL = null;
+
+function openFig1() {
+  var wrap = document.getElementById('fig1-frame-wrap');
+  var preview = document.getElementById('fig1-preview');
+  var btn = document.getElementById('fig1-open');
+  var frame = document.getElementById('fig1-frame');
+
+  preview.style.display = 'none';
+  wrap.style.display = 'block';
+  btn.textContent = '⚡ RUNNING';
+  btn.style.opacity = '0.5';
+
+  // Load the sphere packing visualiser from the same directory
+  // Falls back to blob URL built from embedded source
+  if (fig1SrcURL) {
+    frame.src = fig1SrcURL;
+    return;
+  }
+
+  // Build blob from embedded source
+  var src = getFig1Source();
+  var blob = new Blob([src], {type: 'text/html'});
+  fig1SrcURL = URL.createObjectURL(blob);
+  frame.src = fig1SrcURL;
+
+  // Pause narration while figure is open
+  if (isPlaying) {
+    isPlaying = false;
+    window.speechSynthesis.pause();
+    document.getElementById('btn-play').textContent = '▶ PLAY';
+    document.getElementById('btn-play').classList.remove('active');
+  }
+}
+
+function closeFig1() {
+  document.getElementById('fig1-frame-wrap').style.display = 'none';
+  document.getElementById('fig1-preview').style.display = 'flex';
+  document.getElementById('fig1-open').textContent = '⚡ OPEN VISUALISER';
+  document.getElementById('fig1-open').style.opacity = '1';
+}
+
+function getFig1Source() {
+  // Returns the full sphere packing HTML as a string
+  // Embedded here so the paper is self-contained
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>No Singularity — The 85% Bang Mechanism</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#04040c;color:#e8e4f0;font-family:'Crimson Pro',serif;overflow:hidden;}
+canvas{display:block;position:fixed;top:0;left:0;}
+#statement{position:fixed;top:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:70px;z-index:20;background:linear-gradient(180deg,rgba(4,4,12,0.97) 70%,transparent);pointer-events:none;}
+#statement h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,3.5vw,44px);letter-spacing:5px;color:#ef4444;text-shadow:0 0 40px rgba(239,68,68,0.6);line-height:1;}
+#statement p{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4fc3f7;margin-top:3px;text-transform:uppercase;}
+#info{position:fixed;top:78px;left:12px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(4,4,12,0.92);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:12px 14px;width:260px;line-height:1.8;}
+#info .label{color:#888;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;}
+#info .stage{font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:7px;}
+#info .bar-row{display:flex;align-items:center;gap:7px;margin:3px 0;}
+#info .bar-label{color:#888;font-size:9px;width:52px;flex-shrink:0;}
+#info .bar{flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;position:relative;}
+#info .bar-fill{height:100%;border-radius:2px;transition:width 0.04s linear;}
+#info .bar-marker{position:absolute;top:-1px;bottom:-1px;width:1px;background:rgba(239,68,68,0.7);}
+#info .bar-val{font-size:9px;width:36px;text-align:right;flex-shrink:0;}
+#info .divider{height:1px;background:rgba(255,255,255,0.06);margin:7px 0;}
+#info .body-text{font-size:9px;color:#777;line-height:1.7;}
+#info .highlight{color:#22c55e;} #info .warn{color:#ef4444;} #info .blue{color:#4fc3f7;}
+#spinmeter{position:fixed;top:78px;right:12px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:9px;background:rgba(4,4,12,0.92);border:1px solid rgba(168,85,247,0.2);border-radius:4px;padding:12px 14px;width:188px;}
+#spinmeter .label{color:#888;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:7px;}
+#spinVal{text-align:center;margin-top:7px;font-size:10px;color:#a855f7;}
+#spinNote{text-align:center;margin-top:3px;font-size:8px;color:#555;line-height:1.5;}
+#einstein{position:fixed;bottom:72px;right:12px;z-index:20;font-family:'Crimson Pro',serif;font-style:italic;font-size:12px;color:rgba(232,228,240,0.3);max-width:240px;text-align:right;line-height:1.6;}
+#einstein cite{display:block;font-style:normal;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(232,228,240,0.18);margin-top:3px;}
+#controls{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:9px;align-items:center;z-index:20;background:rgba(4,4,12,0.95);border:1px solid rgba(239,68,68,0.25);border-radius:6px;padding:9px 18px;}
+#controls label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#666;letter-spacing:2px;text-transform:uppercase;}
+#controls input[type=range]{width:230px;accent-color:#ef4444;cursor:pointer;}
+#controls .val{font-family:'JetBrains Mono',monospace;font-size:12px;color:#22c55e;min-width:46px;}
+#controls button{font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid currentColor;border-radius:3px;padding:5px 11px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;background:transparent;transition:all 0.15s;}
+#btnAuto{color:#4fc3f7;border-color:rgba(79,195,247,0.4);}
+#btnReset2{color:#888;border-color:rgba(255,255,255,0.15);}
+#btnBang{color:#ef4444;border-color:rgba(239,68,68,0.5);}
+#scale{position:fixed;bottom:72px;left:12px;z-index:20;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;}
+.scale-row{display:flex;align-items:center;gap:5px;margin:2px 0;}
+.scale-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="statement">
+  <h1>THERE IS NO SINGULARITY</h1>
+  <p>85% sphere packing &nbsp;·&nbsp; The atom is squashed, not split &nbsp;·&nbsp; <span style="color:#fbbf24">SLOW MOTION</span></p>
+</div>
+<div id="info">
+  <div class="label">Bang Mechanism</div>
+  <div class="stage" id="stageTxt">STAGE 1 — Stable Lattice</div>
+  <div class="bar-row"><span class="bar-label">Packing</span><div class="bar"><div class="bar-fill" id="barPack" style="width:0%;background:#22c55e;"></div><div class="bar-marker" style="left:85%"></div></div><span class="bar-val highlight" id="valPack">74.05%</span></div>
+  <div style="font-size:8px;color:rgba(239,68,68,0.5);text-align:right;margin-top:-2px;margin-bottom:3px;letter-spacing:1px;">⚡ BANG AT 85% ——↑</div>
+  <div class="bar-row"><span class="bar-label">Gap space</span><div class="bar"><div class="bar-fill" id="barGap" style="width:100%;background:#4fc3f7;"></div></div><span class="bar-val blue" id="valGap">25.9%</span></div>
+  <div class="bar-row"><span class="bar-label">Squareness</span><div class="bar"><div class="bar-fill" id="barSq" style="width:0%;background:#f97316;"></div></div><span class="bar-val" id="valSq" style="color:#f97316">0%</span></div>
+  <div class="bar-row"><span class="bar-label">Spin period</span><div class="bar"><div class="bar-fill" id="barSpin" style="width:100%;background:#a855f7;"></div></div><span class="bar-val" id="valSpin" style="color:#a855f7">1.00</span></div>
+  <div class="divider"></div>
+  <div class="body-text" id="bodyTxt">Nucleons packed at <span class="highlight">74.05%</span> — Kepler FCC/HCP maximum.<br>26% gap holds electrons in stable orbitals.<br><span style="color:#555">Only 10.95% more compression needed.</span></div>
+</div>
+<div id="spinmeter">
+  <div class="label">Rotation Period</div>
+  <canvas id="spinC" width="160" height="110"></canvas>
+  <div id="spinVal">T = 1.000</div>
+  <div id="spinNote">As packing → 85%<br>period T → 0<br>This is the 1/0 trigger</div>
+</div>
+<div id="einstein">"God does not play dice with the universe."<br>"A black hole has no singularity."<cite>— Albert Einstein, 1939</cite></div>
+<div id="scale">
+  <div class="scale-row"><div class="scale-dot" style="background:#22c55e"></div><span style="color:#22c55e">74.05% — Kepler stable</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#eab308"></div><span style="color:#eab308">80% — Deformation begins</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#f97316"></div><span style="color:#f97316">83% — Corners forming</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#ef4444"></div><span style="color:#ef4444">85% — Geometric failure → BANG</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#4fc3f7"></div><span style="color:#4fc3f7">e⁻ polar jets</span></div>
+</div>
+<div id="controls">
+  <label>Compression</label>
+  <input type="range" id="pressure" min="0" max="100" value="0">
+  <span class="val" id="pVal">74.1%</span>
+  <button id="btnAuto">▶ Continue</button>
+  <button id="btnReset2">⏸ Pause</button>
+  <button id="btnBang">⚡ Bang</button>
+  <button id="btnRestart" style="color:#888;border-color:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:5px 11px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;background:transparent;font-family:'JetBrains Mono',monospace;font-size:9px;">↺ Restart</button>
+</div>
+<script>
+var PACK_STABLE=Math.PI/Math.sqrt(18);
+var PACK_CRITICAL=0.850;
+var canvas=document.getElementById('c');
+var ctx=canvas.getContext('2d');
+var spinC=document.getElementById('spinC');
+var spinCtx=spinC.getContext('2d');
+var W,H,cx,cy;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;cx=W/2;cy=H/2;}
+window.addEventListener('resize',resize);resize();
+var spheres=[],ROWS=9,COLS=9;
+var baseR=Math.min(W,H)*0.028;
+var latticeTargets=[];
+function buildLatticeTargets(){latticeTargets=[];var spacing=baseR*2.05;var offX=-(COLS-1)*spacing/2;var offY=-(ROWS-1)*spacing*0.866/2;for(var row=0;row<ROWS;row++){for(var col=0;col<COLS;col++){var x=offX+col*spacing+(row%2)*spacing*0.5;var y=offY+row*spacing*0.866;if(Math.sqrt(x*x+y*y)>spacing*4.0)continue;latticeTargets.push({tx:x,ty:y});}}}
+buildLatticeTargets();
+var pressure=0,bangTriggered=false,autoLoop=false,replayTimer=-1,assemblyPhase=false,firstRun=true,paused=false,triggerParticles=[],lastTriggerSpawn=0,triggerHit=false,autoPlay=false,bangPhase=0,bangT=0,particles=[],lastFrame=0,assemblyDone=false;
+function initSpheres(){spheres=[];var latticeR=baseR*5.5;for(var si=latticeTargets.length-1;si>0;si--){var sj=Math.floor(Math.random()*(si+1));var tmp=latticeTargets[si];latticeTargets[si]=latticeTargets[sj];latticeTargets[sj]=tmp;}for(var i=0;i<latticeTargets.length;i++){var lt=latticeTargets[i];var ang=Math.random()*Math.PI*2;var startR=latticeR*(1.4+Math.random()*0.8);var preSettled=firstRun;var st=i===0?0.15:i===1?0.30:0.30+Math.random()*0.9;spheres.push({ox:lt.tx,oy:lt.ty,x:preSettled?lt.tx:Math.cos(ang)*startR,y:preSettled?lt.ty:Math.sin(ang)*startR,vx:0,vy:0,settled:preSettled,settleT:st,cracked:false,crackTime:0,hue:200+Math.random()*40,proton:Math.random()>0.5,spinPhase:Math.random()*Math.PI*2,settleFlash:0});}}
+initSpheres();
+if(firstRun){assemblyDone=true;autoPlay=true;}
+function updateAssembly(dt){var now=performance.now()/1000;var allSettled=true;for(var i=0;i<spheres.length;i++){var s=spheres[i];if(s.settled)continue;allSettled=false;if(now<s.settleT)continue;var dx=s.ox-s.x,dy=s.oy-s.y;var dist=Math.sqrt(dx*dx+dy*dy);var jitter=Math.min(dist*0.4,baseR*1.5);s.vx+=(dx*6+(Math.random()-0.5)*jitter*18)*dt;s.vy+=(dy*6+(Math.random()-0.5)*jitter*18)*dt;var damp=dist>baseR*0.5?0.82:0.68;s.vx*=damp;s.vy*=damp;s.x+=s.vx*dt;s.y+=s.vy*dt;if(dist<0.8&&Math.sqrt(s.vx*s.vx+s.vy*s.vy)<0.5){s.x=s.ox;s.y=s.oy;s.vx=0;s.vy=0;s.settled=true;s.settleFlash=1.0;}}assemblyDone=allSettled;}
+function packPct(p){return p;}
+function spinPeriod(p){if(p<=74.05)return 1.0;if(p<=85.0){var frac=(p-74.05)/10.95;return Math.max(0.001,1.0-Math.pow(frac,1.6));}var overshoot=(p-85.0)/15.0;return Math.max(0.0001,0.001*Math.pow(1-overshoot,2));}
+function updateInfo(p){var pk=packPct(p);var gp=100-pk;var sq=Math.max(0,(p-40)/60);var sp=spinPeriod(p);var packFrac=(pk-74)/11;var packCol=packFrac<0.4?'#22c55e':packFrac<0.7?'#eab308':'#ef4444';document.getElementById('barPack').style.width=pk+'%';document.getElementById('barPack').style.background=packCol;document.getElementById('valPack').textContent=pk.toFixed(2)+'%';document.getElementById('valPack').style.color=packCol;document.getElementById('barGap').style.width=gp+'%';document.getElementById('valGap').textContent=gp.toFixed(2)+'%';document.getElementById('barSq').style.width=(sq*100)+'%';document.getElementById('valSq').textContent=(sq*100).toFixed(0)+'%';var spinFrac=1-sp;var spinCol=spinFrac<0.5?'#a855f7':spinFrac<0.8?'#f97316':'#ef4444';document.getElementById('barSpin').style.width=((1-spinFrac)*100)+'%';document.getElementById('barSpin').style.background=spinCol;document.getElementById('valSpin').textContent=sp.toFixed(3);document.getElementById('valSpin').style.color=spinCol;document.getElementById('pVal').textContent=pk.toFixed(1)+'%';var stageEl=document.getElementById('stageTxt');var bodyEl=document.getElementById('bodyTxt');if(bangPhase===0){if(pk<74.05){stageEl.textContent='BELOW STABLE PACKING';stageEl.style.color='#555';bodyEl.innerHTML='Below Kepler packing.';}else if(pk<80){stageEl.textContent='STAGE 1 — Stable Lattice (74.05%)';stageEl.style.color='#22c55e';bodyEl.innerHTML='Nucleons locked at <span class="highlight">74.05%</span>.<br>Gap space holds electrons.<br><span style="color:#555">10.95% more compression needed.</span>';}else if(pk<85){stageEl.textContent='STAGE 2 — Critical Compression';stageEl.style.color='#f97316';bodyEl.innerHTML='<span style="color:#f97316">SPHERES DEFORMING TOWARD CUBES.</span><br>Spin period collapsing. Jets forming.<br>Lattice corners glowing.';}else{stageEl.textContent='⚡ PAST THE POINT OF NO RETURN';stageEl.style.color='#ef4444';bodyEl.innerHTML='<span class="warn">GEOMETRIC FAILURE IMMINENT.</span><br>Trigger energy needed: literally anything.<br>The cascade is already starting.';}}else if(bangPhase===1){stageEl.textContent='⚡ CHAIN REACTION';stageEl.style.color='#ef4444';bodyEl.innerHTML='Every nucleon fails together.<br>Not fission — <span style="color:#fbbf24">geometric failure.</span>';}else{stageEl.textContent='BANG — ENERGY RELEASED';stageEl.style.color='#a855f7';bodyEl.innerHTML='<span class="highlight">Einstein was right.<br>God does not play dice.<br>There is no singularity.</span>';}}
+function drawSpinGauge(p){var pk=packPct(p);var T=spinPeriod(pk);var sc=spinCtx;var W2=160,H2=110;sc.clearRect(0,0,W2,H2);var cx2=W2/2,cy2=H2*0.55,rad=44;sc.beginPath();sc.arc(cx2,cy2,rad,Math.PI,2*Math.PI);sc.strokeStyle='rgba(255,255,255,0.06)';sc.lineWidth=6;sc.stroke();var frac=1-T;var arcEnd=Math.PI+frac*Math.PI;var col=frac<0.5?'#a855f7':frac<0.8?'#f97316':'#ef4444';sc.beginPath();sc.arc(cx2,cy2,rad,Math.PI,arcEnd);sc.strokeStyle=col;sc.lineWidth=6;sc.lineCap='round';sc.stroke();var needleAng=Math.PI+frac*Math.PI;sc.beginPath();sc.moveTo(cx2,cy2);sc.lineTo(cx2+Math.cos(needleAng)*rad*0.85,cy2+Math.sin(needleAng)*rad*0.85);sc.strokeStyle=col;sc.lineWidth=2;sc.lineCap='round';sc.stroke();sc.font="8px 'JetBrains Mono',monospace";sc.fillStyle='#22c55e';sc.textAlign='left';sc.fillText('T=1',cx2-rad-2,cy2+12);sc.fillStyle='#ef4444';sc.textAlign='right';sc.fillText('T=0',cx2+rad+2,cy2+12);sc.fillStyle='#555';sc.textAlign='center';sc.fillText('1/0 TRIGGER',cx2,cy2+24);document.getElementById('spinVal').textContent='T = '+T.toFixed(4);document.getElementById('spinVal').style.color=col;document.getElementById('spinNote').innerHTML=T<0.05?'<span style="color:#ef4444">PERIOD → ZERO<br>THIS IS THE SINGULARITY<br>IT IS JUST 85% PACKING</span>':T<0.3?'<span style="color:#f97316">Period collapsing fast</span>':'As packing → 85%<br>period T → 0<br>This is the 1/0 trigger';}
+function drawLatticeBonds(compress,sq,globalAlpha){if(!spheres||spheres.length<2)return;var maxBondDist=baseR*2.35;var now3=performance.now()/1000;var tiltZ=0.18+sq*0.22;var rotY=now3*0.04;ctx.save();ctx.globalAlpha=Math.max(0.08,(0.22+sq*0.4)*globalAlpha);for(var i=0;i<spheres.length;i++){var si2=spheres[i];if(!si2.settled&&assemblyPhase)continue;var six=si2.ox*compress,siy=si2.oy*compress;for(var j=i+1;j<spheres.length;j++){var sj2=spheres[j];if(!sj2.settled&&assemblyPhase)continue;var sjx=sj2.ox*compress,sjy=sj2.oy*compress;var dx=sjx-six,dy=sjy-siy;var dist2D=Math.sqrt(dx*dx+dy*dy);if(dist2D>maxBondDist)continue;var zI=(si2.oy/(baseR*1.8))*0.5,zJ=(sj2.oy/(baseR*1.8))*0.5;var x1=cx+six+zI*Math.sin(rotY)*baseR*0.6,y1=cy+siy-zI*tiltZ*baseR*0.5;var x2=cx+sjx+zJ*Math.sin(rotY)*baseR*0.6,y2=cy+sjy-zJ*tiltZ*baseR*0.5;var r2=si2.proton&&sj2.proton?255:si2.proton||sj2.proton?220:100;var g2=si2.proton&&sj2.proton?80:160;var b2=!si2.proton&&!sj2.proton?255:si2.proton||sj2.proton?160:80;var bondAlpha=0.15+sq*0.55;ctx.strokeStyle='rgba('+r2+','+g2+','+b2+','+bondAlpha+')';ctx.lineWidth=0.4+sq*1.4;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();if(sq>0.3){var nodeR=1.2+sq*2.5;ctx.fillStyle='rgba(255,220,120,'+(sq*0.7)+')';ctx.beginPath();ctx.arc(x1,y1,nodeR,0,Math.PI*2);ctx.fill();}}}ctx.restore();}
+function drawNucleon(x,y,r,sq,s,alpha,crackT){ctx.save();ctx.translate(x,y);ctx.beginPath();if(sq<0.01){ctx.arc(0,0,r,0,Math.PI*2);}else{var cornerR=Math.max(1,r*(1-sq*0.88));var hs=r*(0.8+sq*0.22);ctx.roundRect(-hs,-hs,hs*2,hs*2,cornerR);}var baseHue=s.proton?0:210;var sat=55+sq*35;var light=30+sq*20;var grad=ctx.createRadialGradient(r*0.25,-r*0.25,0,0,0,r*1.2);grad.addColorStop(0,'hsla('+baseHue+','+sat+'%,'+(light+25)+'%,'+alpha+')');grad.addColorStop(0.6,'hsla('+baseHue+','+sat+'%,'+light+'%,'+alpha+')');grad.addColorStop(1,'hsla('+baseHue+','+(sat-20)+'%,'+(light-15)+'%,'+alpha+')');ctx.fillStyle=grad;ctx.fill();if(sq>0.05){ctx.strokeStyle='rgba(255,'+(Math.floor(200-sq*180))+','+(Math.floor(60-sq*60))+','+(sq*0.9*alpha)+')';ctx.lineWidth=1+sq*2.5;ctx.stroke();if(sq>0.25){var corners=[[-1,-1],[1,-1],[1,1],[-1,1]];var hs2=r*(0.8+sq*0.22);for(var c=0;c<4;c++){var cx3=corners[c][0]*hs2*0.82,cy3=corners[c][1]*hs2*0.82;var stR=2+sq*8;var sg=ctx.createRadialGradient(cx3,cy3,0,cx3,cy3,stR);sg.addColorStop(0,'rgba(255,255,200,'+(sq*0.9*alpha)+')');sg.addColorStop(0.5,'rgba(255,80,0,'+(sq*0.5*alpha)+')');sg.addColorStop(1,'rgba(255,0,0,0)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(cx3,cy3,stR,0,Math.PI*2);ctx.fill();}}}else{ctx.strokeStyle='rgba(100,150,255,'+(0.25*alpha)+')';ctx.lineWidth=0.5;ctx.stroke();}ctx.restore();}
+function drawElectronJets(p){var pk=packPct(p);if(pk<76)return;var jetStrength=Math.min(1,(pk-76)/9*1.2);var poleY=baseR*ROWS*0.52;var now=Date.now()/1000;for(var pole=0;pole<2;pole++){var dir=pole===0?-1:1;var baseY=cy+dir*poleY*(1-p/100*0.12)*0.75;for(var j=0;j<12;j++){var tt=(now*1.4+j*0.25)%2.5;var jx=cx+Math.sin(tt*3.5+j*0.7)*(4+j*1.5);var jy=baseY+dir*tt*90*jetStrength;var ja=Math.max(0,1-tt*0.5)*jetStrength*0.75;ctx.fillStyle='rgba(79,195,247,'+ja+')';ctx.beginPath();ctx.arc(jx,jy,1.5+(1-tt/2.5)*3.5,0,Math.PI*2);ctx.fill();}if(jetStrength>0.25){ctx.font="bold 9px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillStyle='rgba(79,195,247,'+(jetStrength*0.6)+')';ctx.fillText('e\u207B POLAR JET',cx,cy-dir*poleY*1.15);}}}
+function drawGaps(p){var pk=packPct(p);var compress=1-(pk/100)*0.16;var gapAlpha=Math.max(0,(85-pk)/11*0.35);if(gapAlpha<0.02)return;for(var i=0;i<spheres.length;i++){for(var j=i+1;j<spheres.length;j++){var dx=spheres[j].ox-spheres[i].ox,dy=spheres[j].oy-spheres[i].oy;if(Math.sqrt(dx*dx+dy*dy)>baseR*2.6)continue;var mx=cx+(spheres[i].ox+spheres[j].ox)/2*compress,my=cy+(spheres[i].oy+spheres[j].oy)/2*compress;ctx.fillStyle='rgba(50,200,255,'+gapAlpha+')';ctx.beginPath();ctx.arc(mx,my,2.5*(1-p/100)+0.4,0,Math.PI*2);ctx.fill();}}}
+function drawSpinRing(p){var pk=packPct(p);var T=spinPeriod(pk);var now=Date.now()/1000;var spinSpeed=1/Math.max(0.02,T*2);var ringR=baseR*ROWS*0.5+baseR*1.5;var col=T>0.5?'rgba(168,85,247,':'rgba(239,68,68,';ctx.strokeStyle=col+((0.3+p/100*0.5)*0.15)+')';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,ringR,0,Math.PI*2);ctx.stroke();for(var d=0;d<12;d++){var ang=(d/12)*Math.PI*2+now*spinSpeed;ctx.fillStyle=col+(0.2+p/100*0.6)+')';ctx.beginPath();ctx.arc(cx+Math.cos(ang)*ringR,cy+Math.sin(ang)*ringR,2+p/100*2,0,Math.PI*2);ctx.fill();}}
+function triggerBang(){bangPhase=1;bangT=0;for(var i=0;i<spheres.length;i++){spheres[i].cracked=true;spheres[i].crackTime=Math.random()*0.3;}setTimeout(function(){bangPhase=2;for(var k=0;k<300;k++){var ang=Math.random()*Math.PI*2;var spd=80+Math.random()*200;particles.push({x:cx,y:cy,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:1+Math.random()*4,col:'hsla('+(Math.random()*60)+',100%,'+(50+Math.random()*30)+'%,',life:1.0});}},600);}
+function spawnTrigger(pk,now){if(bangPhase>0)return;var zone=pk<88?1:pk<92?2:pk<96?3:4;var spawnInterval=zone===1?4.0:zone===2?2.2:zone===3?1.0:0.35;if(now-lastTriggerSpawn<spawnInterval)return;lastTriggerSpawn=now;var ang=Math.random()*Math.PI*2;var startDist=Math.max(W,H)*0.55;var sx=cx+Math.cos(ang)*startDist,sy=cy+Math.sin(ang)*startDist;var speed=zone===1?55:zone===2?80:zone===3?110:160;var targetAng=ang+Math.PI+(Math.random()-0.5)*0.3;var types=[null,{label:'e\u207B',col:'#4fc3f7',r:4,trail:'#4fc3f7',name:'STRAY ELECTRON'},{label:'\u03B3',col:'#fbbf24',r:3,trail:'#fbbf24',name:'STRAY PHOTON'},{label:'\u223F',col:'#a855f7',r:5,trail:'#a855f7',name:'QUANTUM FLUCTUATION'},{label:'?',col:'#ef4444',r:6,trail:'#ef4444',name:'ANYTHING'}];var type=types[Math.min(zone,4)]||types[1];triggerParticles.push({x:sx,y:sy,vx:Math.cos(targetAng)*speed,vy:Math.sin(targetAng)*speed,trail:[],maxTrail:28,r:type.r,col:type.col,trailCol:type.trail,label:type.label,name:type.name,zone:zone,hit:false,hitT:0,born:now});}
+function updateTriggers(dt,now){var latticeR=baseR*5.5;for(var i=triggerParticles.length-1;i>=0;i--){var tp=triggerParticles[i];if(tp.hit){tp.hitT+=dt;if(tp.hitT>2.0)triggerParticles.splice(i,1);continue;}tp.trail.unshift({x:tp.x,y:tp.y});if(tp.trail.length>tp.maxTrail)tp.trail.pop();tp.x+=tp.vx*dt;tp.y+=tp.vy*dt;var dx=tp.x-cx,dy=tp.y-cy;if(Math.sqrt(dx*dx+dy*dy)<latticeR*0.65){tp.hit=true;tp.hitT=0;if(tp.zone>=4&&bangPhase===0&&!bangTriggered){bangTriggered=true;setTimeout(function(){if(bangPhase===0)triggerBang();},300+Math.random()*400);}}if(Math.abs(tp.x-cx)>W||Math.abs(tp.y-cy)>H)triggerParticles.splice(i,1);}}
+function drawTriggers(){for(var i=0;i<triggerParticles.length;i++){var tp=triggerParticles[i];if(tp.hit){var hitR=tp.r+tp.hitT*60;var hitA=Math.max(0,0.8-tp.hitT*0.6);ctx.globalAlpha=hitA;ctx.fillStyle=tp.col;ctx.beginPath();ctx.arc(tp.x,tp.y,hitR*0.3,0,Math.PI*2);ctx.fill();ctx.strokeStyle=tp.col;ctx.globalAlpha=hitA*0.6;ctx.lineWidth=2;ctx.beginPath();ctx.arc(tp.x,tp.y,hitR,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;continue;}for(var t=0;t<tp.trail.length;t++){ctx.globalAlpha=(1-t/tp.trail.length)*0.5;ctx.fillStyle=tp.trailCol;ctx.beginPath();ctx.arc(tp.trail[t].x,tp.trail[t].y,tp.r*(1-t/tp.trail.length)*0.7,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;ctx.fillStyle=tp.col;ctx.beginPath();ctx.arc(tp.x,tp.y,tp.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=0.9;ctx.fillStyle='#fff';ctx.font="bold 10px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillText(tp.label,tp.x,tp.y+tp.r+14);ctx.font="8px 'JetBrains Mono',monospace";ctx.fillStyle=tp.col;ctx.fillText(tp.name,tp.x,tp.y+tp.r+25);ctx.globalAlpha=1;}}
+function doReset(){pressure=0;document.getElementById('pressure').value=0;bangPhase=0;bangT=0;particles=[];bangTriggered=false;triggerParticles=[];lastTriggerSpawn=0;triggerHit=false;assemblyPhase=true;assemblyDone=false;replayTimer=-1;autoPlay=false;paused=false;firstRun=false;window._assemblyStart=null;initSpheres();}
+function draw(ts){var dt=Math.min(0.05,(ts-lastFrame)/1000);lastFrame=ts;if(paused){pressure=parseFloat(document.getElementById('pressure').value);var p2=pressure;ctx.fillStyle='rgba(4,4,12,0.82)';ctx.fillRect(0,0,W,H);var pk2=packPct(p2),compress2=1-(pk2/100)*0.16,sq2=Math.max(0,(pk2-80)/20);drawLatticeBonds(compress2,sq2,1.0);for(var i=0;i<spheres.length;i++){var s2=spheres[i];drawNucleon(cx+s2.ox*compress2,cy+s2.oy*compress2,baseR*(1+p2/100*0.09),sq2,s2,1,0);}ctx.fillStyle='rgba(79,195,247,0.8)';ctx.font="bold 14px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillText('\u23F8 PAUSED — drag slider to explore',cx,H-50);updateInfo(p2);drawSpinGauge(p2);requestAnimationFrame(draw);return;}if(assemblyPhase){if(!window._assemblyStart)window._assemblyStart=performance.now()/1000;updateAssembly(dt);if(assemblyDone){assemblyPhase=false;if(autoLoop)autoPlay=true;}}if(autoPlay&&bangPhase===0&&!assemblyPhase){var rate=pressure<74?37:5.5;pressure=Math.min(100,pressure+dt*rate);document.getElementById('pressure').value=pressure;if(pressure>=85&&bangPhase===0&&!bangTriggered){bangTriggered=true;setTimeout(function(){if(bangPhase===0)triggerBang();},Math.max(0,700*Math.exp(-(pressure-85)*0.4)));}}else if(bangPhase===0&&!assemblyPhase){pressure=parseFloat(document.getElementById('pressure').value);}if(bangPhase===2&&autoLoop){if(replayTimer<0)replayTimer=4.0;replayTimer-=dt;if(replayTimer>0){ctx.save();ctx.font="bold 42px 'Bebas Neue',sans-serif";ctx.textAlign='center';ctx.fillStyle='rgba(79,195,247,0.6)';ctx.fillText('REPLAYING IN '+Math.ceil(replayTimer),cx,H-55);ctx.restore();}if(replayTimer<=0){doReset();autoPlay=true;}}if(bangPhase>0)bangT+=dt;var p=pressure;ctx.fillStyle='rgba(4,4,12,0.82)';ctx.fillRect(0,0,W,H);if(bangPhase===0){var pk=packPct(p);var compress=1-(pk/100)*0.16;var sq=Math.max(0,(pk-80)/20);drawSpinRing(p);drawGaps(p);drawLatticeBonds(compress,sq,1.0);for(var i=0;i<spheres.length;i++){var s=spheres[i];var drawR=baseR*(1+p/100*0.09);if(!assemblyPhase){drawNucleon(cx+s.ox*compress,cy+s.oy*compress,drawR,sq,s,1,0);}else if(s.settled){var dx=cx+s.ox*compress,dy=cy+s.oy*compress;drawNucleon(dx,dy,drawR,sq,s,1,0);if(s.settleFlash>0){s.settleFlash-=dt*3;ctx.globalAlpha=s.settleFlash*0.5;ctx.fillStyle=s.proton?'#ff8080':'#80c0ff';ctx.beginPath();ctx.arc(dx,dy,drawR*2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}}else{var px=cx+s.x,py=cy+s.y;var col=s.proton?'#ff6060':'#60a0ff';ctx.save();ctx.globalAlpha=0.8;ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,drawR*0.45,0,Math.PI*2);ctx.fill();ctx.restore();}}drawElectronJets(p);var pk3=packPct(p);if(pk3>=85&&bangPhase===0){spawnTrigger(pk3,ts/1000);updateTriggers(dt,ts/1000);drawTriggers();}ctx.font="bold 13px 'JetBrains Mono',monospace";ctx.textAlign='center';var pk4=p;var pkCol=pk4<80?'#22c55e':pk4<84?'#eab308':'#ef4444';ctx.fillStyle=pkCol;ctx.fillText(packPct(p).toFixed(2)+'% PACKED',cx,cy+baseR*ROWS*0.5+baseR*3.5);ctx.font="9px 'JetBrains Mono',monospace";ctx.fillStyle='rgba(79,195,247,0.6)';ctx.fillText((100-packPct(p)).toFixed(2)+'% gap space (electron orbitals)',cx,cy+baseR*ROWS*0.5+baseR*5.2);}else if(bangPhase===1){for(var i=0;i<spheres.length;i++){var s=spheres[i];var ct=bangT-s.crackTime;if(ct<0){drawNucleon(cx+s.ox*0.84,cy+s.oy*0.84,baseR,1,s,1,0);continue;}var alpha=Math.max(0,1-ct*0.8);if(alpha>0)drawNucleon(cx+s.ox*0.84,cy+s.oy*0.84,baseR*(1+ct*0.4),1,s,alpha,ct);var glow=ctx.createRadialGradient(cx+s.ox*0.84,cy+s.oy*0.84,0,cx+s.ox*0.84,cy+s.oy*0.84,baseR*(2+ct));glow.addColorStop(0,'rgba(255,220,80,'+(Math.max(0,0.7-ct*0.5))+')');glow.addColorStop(1,'rgba(255,80,0,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx+s.ox*0.84,cy+s.oy*0.84,baseR*(2+ct),0,Math.PI*2);ctx.fill();}}else{var flashR=bangT*180,flashA=Math.max(0,0.8-bangT*0.3);var fg=ctx.createRadialGradient(cx,cy,0,cx,cy,flashR);fg.addColorStop(0,'rgba(255,255,220,'+flashA+')');fg.addColorStop(0.4,'rgba(255,120,20,'+(flashA*0.6)+')');fg.addColorStop(0.8,'rgba(239,68,68,'+(flashA*0.3)+')');fg.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx,cy,flashR,0,Math.PI*2);ctx.fill();for(var i=particles.length-1;i>=0;i--){var pt=particles[i];pt.x+=pt.vx*dt;pt.y+=pt.vy*dt;pt.vx*=0.97;pt.vy*=0.97;pt.life-=dt*0.4;if(pt.life<=0){particles.splice(i,1);continue;}ctx.fillStyle=pt.col+pt.life+')';ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*(0.5+pt.life*0.5),0,Math.PI*2);ctx.fill();}var shellR=(bangT-0.3)*130,shellA=Math.max(0,0.8-(bangT-0.3)/5);if(shellA>0){ctx.strokeStyle='rgba(168,85,247,'+shellA+')';ctx.lineWidth=2+shellA*4;ctx.beginPath();ctx.arc(cx,cy,shellR,0,Math.PI*2);ctx.stroke();}ctx.font="bold 14px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillStyle='rgba(255,255,220,'+(Math.min(1,bangT-0.5)*0.8)+')';ctx.fillText('NO SINGULARITY \u2014 JUST 85% PACKING',cx,cy);ctx.font="10px 'JetBrains Mono',monospace";ctx.fillStyle='rgba(34,197,94,'+(Math.min(1,bangT-0.8)*0.7)+')';ctx.fillText('Einstein was right. God does not play dice.',cx,cy+36);}updateInfo(pressure);drawSpinGauge(pressure);requestAnimationFrame(draw);}
+document.getElementById('pressure').oninput=function(){if(bangPhase===0)pressure=parseFloat(this.value);};
+document.getElementById('btnAuto').onclick=function(){paused=false;autoLoop=true;autoPlay=true;this.textContent='▶ Continue';};
+document.getElementById('btnReset2').onclick=function(){paused=!paused;this.textContent=paused?'▶ Resume':'⏸ Pause';if(paused)autoPlay=false;};
+document.getElementById('btnRestart').onclick=function(){paused=false;autoLoop=true;doReset();autoPlay=true;document.getElementById('btnReset2').textContent='⏸ Pause';};
+document.getElementById('btnBang').onclick=function(){if(bangPhase>0)return;pressure=100;document.getElementById('pressure').value=100;triggerBang();};
+lastFrame=performance.now();
+requestAnimationFrame(draw);
+<\/script>
+</body>
+</html>`;
+}
+
+const sections = Array.from(document.querySelectorAll('[data-section]'));
+let currentIdx = 0;
+let utterance = null;
+let isPlaying = false;
+let speechRate = 1.0;
+let fontSize = 20;
+
+function getAllText(el) {
+  // Get clean readable text from a section
+  const clone = el.cloneNode(true);
+  // Remove play-dot spans
+  clone.querySelectorAll('.play-dot,.section-number,.abstract-label,.callout-label').forEach(e => e.remove());
+  // Get text, clean up whitespace
+  return clone.innerText
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/φ/g, 'phi')
+    .replace(/≈/g, 'approximately')
+    .replace(/→/g, 'leads to')
+    .replace(/∝/g, 'is proportional to')
+    .replace(/²/g, ' squared')
+    .replace(/₀/g, ' zero')
+    .replace(/₁/g, ' one')
+    .replace(/Mly/g, 'million light years')
+    .replace(/Gyr/g, 'billion years')
+    .replace(/H₀/g, 'H zero')
+    .replace(/km\/s\/Mpc/g, 'kilometres per second per megaparsec')
+    .trim();
+}
+
+function speakSection(idx) {
+  if (idx >= sections.length) { stopNarration(); return; }
+  currentIdx = idx;
+
+  // Highlight current section
+  sections.forEach((s,i) => s.classList.toggle('playing', i === idx));
+
+  // Scroll into view
+  sections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Update player display
+  document.getElementById('player-section').textContent =
+    sections[idx].dataset.section || '';
+
+  // Update progress
+  document.getElementById('progress-fill').style.width =
+    ((idx / (sections.length - 1)) * 100) + '%';
+
+  // Cancel any current speech
+  window.speechSynthesis.cancel();
+
+  const text = getAllText(sections[idx]);
+  utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = speechRate;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  // Try to get a good voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.name.includes('Daniel') ||
+    v.name.includes('Google UK') ||
+    v.name.includes('Alex') ||
+    v.name.includes('Arthur') ||
+    (v.lang === 'en-GB' && !v.name.includes('Female'))
+  ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+  if (preferred) utterance.voice = preferred;
+
+  utterance.onend = () => {
+    if (isPlaying) speakSection(idx + 1);
+  };
+
+  utterance.onerror = (e) => {
+    if (e.error !== 'interrupted') speakSection(idx + 1);
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function togglePlay() {
+  if (isPlaying) {
+    isPlaying = false;
+    window.speechSynthesis.pause();
+    document.getElementById('btn-play').textContent = '▶ PLAY';
+    document.getElementById('btn-play').classList.remove('active');
+  } else {
+    isPlaying = true;
+    document.getElementById('btn-play').textContent = '⏸ PAUSE';
+    document.getElementById('btn-play').classList.add('active');
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    } else {
+      speakSection(currentIdx);
+    }
+  }
+}
+
+function stopNarration() {
+  isPlaying = false;
+  window.speechSynthesis.cancel();
+  sections.forEach(s => s.classList.remove('playing'));
+  document.getElementById('btn-play').textContent = '▶ PLAY';
+  document.getElementById('btn-play').classList.remove('active');
+  document.getElementById('player-section').textContent = 'Stopped';
+  document.getElementById('progress-fill').style.width = '0%';
+  currentIdx = 0;
+}
+
+function nextSection() {
+  if (currentIdx < sections.length - 1) {
+    window.speechSynthesis.cancel();
+    if (isPlaying) speakSection(currentIdx + 1);
+    else {
+      currentIdx++;
+      sections.forEach((s,i) => s.classList.toggle('playing', i === currentIdx));
+      sections[currentIdx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('player-section').textContent = sections[currentIdx].dataset.section || '';
+    }
+  }
+}
+
+function prevSection() {
+  if (currentIdx > 0) {
+    window.speechSynthesis.cancel();
+    if (isPlaying) speakSection(currentIdx - 1);
+    else {
+      currentIdx--;
+      sections.forEach((s,i) => s.classList.toggle('playing', i === currentIdx));
+      sections[currentIdx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('player-section').textContent = sections[currentIdx].dataset.section || '';
+    }
+  }
+}
+
+function changeSpeed(val) {
+  speechRate = parseFloat(val);
+  if (isPlaying && utterance) {
+    const idx = currentIdx;
+    window.speechSynthesis.cancel();
+    speakSection(idx);
+  }
+}
+
+function seekProgress(e) {
+  const bar = document.getElementById('progress-bar');
+  const frac = e.offsetX / bar.offsetWidth;
+  const idx = Math.round(frac * (sections.length - 1));
+  window.speechSynthesis.cancel();
+  if (isPlaying) speakSection(idx);
+  else {
+    currentIdx = idx;
+    sections.forEach((s,i) => s.classList.toggle('playing', i === idx));
+    sections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('player-section').textContent = sections[idx].dataset.section || '';
+    document.getElementById('progress-fill').style.width = (frac * 100) + '%';
+  }
+}
+
+function changeFontSize(delta) {
+  fontSize = Math.max(16, Math.min(32, fontSize + delta));
+  document.getElementById('paper').style.fontSize = fontSize + 'px';
+}
+
+// Click any section to jump to it
+sections.forEach((s, i) => {
+  s.addEventListener('click', () => {
+    currentIdx = i;
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      speakSection(i);
+    } else {
+      sections.forEach((sec, j) => sec.classList.toggle('playing', j === i));
+      document.getElementById('player-section').textContent = s.dataset.section || '';
+      document.getElementById('progress-fill').style.width =
+        ((i / (sections.length - 1)) * 100) + '%';
+    }
+  });
+});
+
+// Load voices
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
