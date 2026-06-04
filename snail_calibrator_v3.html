@@ -82,7 +82,7 @@ button:hover { background: #1a3d2e; }
 .lib-fln { color: #ffaa00; font-size: 9px; }
 .lib-meta { color: rgba(232,228,240,0.4); font-size: 7px; }
 .lib-status { font-size: 7px; }
-.lib-status.kiss { color: #4ade80; }
+.lib-status.contact { color: #4ade80; }
 .lib-status.warn { color: #fbbf24; }
 .lib-actions { display: flex; gap: 4px; }
 .lib-actions button { padding: 2px 7px; font-size: 7px; }
@@ -250,13 +250,13 @@ button:hover { background: #1a3d2e; }
   </div>
 </div>
 
-<!-- φ-KISSING CHECK PANEL -->
+<!-- φ-CONTACT CHECK PANEL -->
 <div style="width:100%;max-width:920px;margin-top:14px;background:rgba(6,6,20,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:6px;overflow:hidden;">
   <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(168,85,247,0.05);border-bottom:1px solid rgba(168,85,247,0.12);">
-    <span style="font-size:11px;color:#a855f7;font-weight:700;letter-spacing:0.06em;flex:1;">φ-KISSING CHECK — does each shell ratio equal φ = 1.6180?</span>
+    <span style="font-size:11px;color:#a855f7;font-weight:700;letter-spacing:0.06em;flex:1;">φ-CONTACT CHECK — does each shell ratio equal φ = 1.6180?</span>
     <span style="font-size:9px;color:rgba(168,85,247,0.4);">toggle MEASURED/CORRECTED to see the difference</span>
   </div>
-  <div id="phiKissPanel" style="padding:10px 10px 12px;">
+  <div id="phiContactPanel" style="padding:10px 10px 12px;">
     <div style="font-size:9px;color:rgba(232,228,240,0.3);padding:10px;">Loading…</div>
   </div>
 </div>
@@ -276,7 +276,7 @@ button:hover { background: #1a3d2e; }
     <div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:5px 8px;">
       <div style="font-size:8px;color:rgba(232,228,240,0.4);">First contact</div>
       <div style="font-size:11px;color:#ef4444;font-weight:700;" id="tlT1">—</div>
-      <div style="font-size:7px;color:rgba(239,68,68,0.5);" id="tlT1sub">inner shell kisses · sea recedes</div>
+      <div style="font-size:7px;color:rgba(239,68,68,0.5);" id="tlT1sub">inner shell contactes · sea recedes</div>
     </div>
     <div style="background:rgba(93,228,161,0.06);border:1px solid rgba(93,228,161,0.25);border-radius:4px;padding:5px 8px;">
       <div style="font-size:8px;color:rgba(232,228,240,0.4);">Full enclosure — WE ARE HERE</div>
@@ -442,7 +442,7 @@ function makeFLN(p) {
   var ds = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
   var ts = pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds());
   var cm = document.getElementById('sCM').value;
-  var contactTag = Math.abs(p.gap)<2 ? 'KISS' : (p.gap>0?'G'+p.gap:'O'+Math.abs(p.gap));
+  var contactTag = Math.abs(p.gap)<2 ? 'CONTACT' : (p.gap>0?'G'+p.gap:'O'+Math.abs(p.gap));
   return 'FLN_'+ds+'_T'+ts+'_B'+p.bootesR+'_N'+p.nShells+'_phi'+p.phi.toFixed(3)+'_CM'+cm+'_'+contactTag;
 }
 function pad2(n){ return n<10?'0'+n:String(n); }
@@ -471,7 +471,7 @@ function buildShells(p){
 
   if (p.mode === 'corrected' && p.nShells <= CORRECTED_SIZES.shells.length) {
     // Use corrected sizes directly — not derived from φ-division
-    // This lets us see if they RESTORE the φ-kissing condition
+    // This lets us see if they RESTORE the φ-contacting condition
     var n = p.nShells;
     var useSizes = CORRECTED_SIZES.shells.slice(0, n);
     // Sort smallest to largest (innermost first)
@@ -529,7 +529,7 @@ function computeLayers(shells, gap){
       vol:vol, sa_o:sa_o, sa_i:sa_i,
       T:T, E:E, P:P, Fpush:Fpush, Fnet:0,
       core: i===0?ro/4:0,
-      contact: i===0?'centre': Math.abs(gap)<2?'KISSING':gap>0?'gap '+gap.toFixed(0)+' Mly':'ovlp '+Math.abs(gap).toFixed(0)+' Mly'
+      contact: i===0?'centre': Math.abs(gap)<2?'CONTACT':gap>0?'gap '+gap.toFixed(0)+' Mly':'ovlp '+Math.abs(gap).toFixed(0)+' Mly'
     });
   }
   // Net force: self push minus containment from layer above
@@ -648,7 +648,7 @@ function draw(){
   document.getElementById('stS1').textContent=inner.r.toFixed(0)+' Mly';
   document.getElementById('stRatio').textContent=(outer.r/inner.r).toFixed(3);
   document.getElementById('stContact').innerHTML=contactOk
-    ?'<span class="contact">★ KISSING</span>'
+    ?'<span class="contact">★ CONTACT</span>'
     :(p.gap>0?'<span class="warn">gap '+p.gap+' Mly</span>':'<span class="bad">ovlp '+(-p.gap)+' Mly</span>');
   document.getElementById('stSpan').textContent=(pMax-pMin).toFixed(0)+' Mly';
   document.getElementById('stCore').textContent=(inner.r/4).toFixed(0)+' Mly';
@@ -669,8 +669,8 @@ function draw(){
   lastGob={params:p, layers:layers, fln:makeFLN(p)};
   renderLayerTable(layers, false);
 
-  // φ-kissing check — does each pair satisfy r_outer / r_inner ≈ φ?
-  drawPhiKissingCheck(shells, p);
+  // φ-contacting check — does each pair satisfy r_outer / r_inner ≈ φ?
+  drawPhiContactCheck(shells, p);
 
   // Timeline panel
   drawTimeline(p);
@@ -690,7 +690,7 @@ function renderLayerTable(layers, saved){
     var col=getCol(i,n);
     var fd=l.Fnet>0?'▲ out':l.Fnet<0?'▼ in ':'—';
     var fc=l.Fnet>0?'#4ade80':l.Fnet<0?'#ef4444':'#888';
-    var cc=l.contact==='KISSING'?'#4ade80':l.contact==='centre'?'rgba(232,228,240,0.3)':l.contact.startsWith('gap')?'#fbbf24':'#ef4444';
+    var cc=l.contact==='CONTACT'?'#4ade80':l.contact==='centre'?'rgba(232,228,240,0.3)':l.contact.startsWith('gap')?'#fbbf24':'#ef4444';
     html+='<tr>';
     html+='<td><span class="ldot" style="background:'+col+'"></span><span style="color:'+col+'">'+l.name+'</span></td>';
     html+='<td>'+l.ro.toFixed(1)+'</td>';
@@ -903,8 +903,8 @@ function renderLibrary(){
   library.forEach(function(rec,idx){
     var p=rec.params;
     var meta='B'+p.bootesR_mly+' N'+p.nShells+' φ'+p.phi.toFixed(3)+' CM'+p.cm_pct+'% gap'+p.gap_mly;
-    var stCls=p.contact_ok?'kiss':'warn';
-    var stTxt=p.contact_ok?'★ KISSING':'gap';
+    var stCls=p.contact_ok?'contact':'warn';
+    var stTxt=p.contact_ok?'★ CONTACT':'gap';
     html+='<div class="lib-row">';
     html+='<div>';
     html+='<div class="lib-fln">'+rec.fln+'</div>';
@@ -1011,10 +1011,10 @@ function copyJson(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// φ-KISSING CHECK — does correction restore the golden ratio between shells?
+// φ-CONTACT CHECK — does correction restore the golden ratio between shells?
 // ══════════════════════════════════════════════════════════════════════════
-function drawPhiKissingCheck(shells, p) {
-  var panel = document.getElementById('phiKissPanel');
+function drawPhiContactCheck(shells, p) {
+  var panel = document.getElementById('phiContactPanel');
   if (!panel) return;
 
   var names = ['Purple','Blue','Green','Yellow','Orange','Red-1','Boötes'];
@@ -1039,7 +1039,7 @@ function drawPhiKissingCheck(shells, p) {
     var colI  = i-1 < cols.length ? cols[i-1]  : '#888';
     var colO  = i   < cols.length ? cols[i]    : '#888';
     var statusCol = good ? '#5de4a1' : warn ? '#fbbf24' : '#ef4444';
-    var statusTxt = good ? '✓ φ kissing' : warn ? '≈ close' : '✗ gap';
+    var statusTxt = good ? '✓ φ contacting' : warn ? '≈ close' : '✗ gap';
 
     html += '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:6px 10px;">';
     html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
@@ -1058,23 +1058,23 @@ function drawPhiKissingCheck(shells, p) {
   // Summary verdict
   var verdictCol = allGood ? '#5de4a1' : '#fbbf24';
   var verdictTxt = allGood
-    ? '✓ ALL SHELLS SATISFY φ-KISSING — φ-ratios correct in measured data — geometry was never wrong'
+    ? '✓ ALL SHELLS SATISFY φ-CONTACT — φ-ratios correct in measured data — geometry was never wrong'
     : p.mode === 'corrected'
       ? '✓ φ-ratios correct — uniform n_void correction preserves all ratios as expected'
       : '⚠ check shell sizes — φ-ratio deviation detected';
 
   html = '<div style="font-size:9px;padding:6px 10px;background:rgba(93,228,161,0.05);border-bottom:1px solid rgba(255,255,255,0.05);color:'+verdictCol+';font-weight:700;">'+verdictTxt+'</div>' + html;
 
-  // Boötes corrected vs kissing prediction
+  // Boötes corrected vs contacting prediction
   if (p.mode === 'corrected' && shells.length >= 2) {
     var outermost = shells[shells.length-1].r;
     var predicted = shells[shells.length-2].r * PHI;
-    var kissErr = ((outermost - predicted)/predicted*100).toFixed(2);
+    var contactErr = ((outermost - predicted)/predicted*100).toFixed(2);
     html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);border-radius:3px;font-size:8px;">';
     html += '<span style="color:#a855f7;font-weight:700;">Boötes predicted from φ: </span>';
-    html += '<span style="color:rgba(232,228,240,0.7);">'+predicted.toFixed(0)+' Mly · actual: '+outermost.toFixed(0)+' Mly · error: '+(kissErr>=0?'+':'')+kissErr+'%</span>';
-    if (Math.abs(kissErr) < 2) {
-      html += '<span style="color:#5de4a1;margin-left:8px;">✓ correction restores φ-kissing</span>';
+    html += '<span style="color:rgba(232,228,240,0.7);">'+predicted.toFixed(0)+' Mly · actual: '+outermost.toFixed(0)+' Mly · error: '+(contactErr>=0?'+':'')+contactErr+'%</span>';
+    if (Math.abs(contactErr) < 2) {
+      html += '<span style="color:#5de4a1;margin-left:8px;">✓ correction restores φ-contacting</span>';
     } else {
       html += '<span style="color:#fbbf24;margin-left:8px;">Boötes correction may need adjustment to close the gap</span>';
     }
@@ -1090,7 +1090,7 @@ function drawPhiKissingCheck(shells, p) {
 // Fixed anchors from observation:
 //   T_NOW    = 13.8 Gyr  — we are here (full enclosure, last contact)
 //   T_ANDROMEDA = 18.3 Gyr from Bang = 4.5 Gyr from now
-//   T_FIRST  = 8.5 Gyr  — first contact (inner shell kisses)
+//   T_FIRST  = 8.5 Gyr  — first contact (inner shell contactes)
 //   INTER    = T_NOW - T_FIRST = 5.3 Gyr
 
 var T_BANG       = 0;
@@ -1154,9 +1154,9 @@ function drawTimeline(p) {
   ctx.textAlign = 'left';
   ctx.fillText('Gyr from Bang', PAD, 155);
 
-  // Boötes contact distance line — where inner shell kisses
+  // Boötes contact distance line — where inner shell contactes
   // The first contact is when the blast wave reaches the inner shell
-  // distance = shell[1].r (innermost kissing shell radius in Mly)
+  // distance = shell[1].r (innermost contacting shell radius in Mly)
   // time = distance / c = distance Mly / 1 Mly per Myr × ... in Gyr
   // Actually we anchor to observed: T_FIRST=8.5, T_NOW=13.8
   // The calibrator shows what the φ-geometry predicts for contact distance
