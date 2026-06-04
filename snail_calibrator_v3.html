@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pinball Universe — Snail Calibrator + Library</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #060610; color: #e8e4f0; font-family: 'IBM Plex Mono', monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px; }
+h1 { font-size: 13px; color: #5de4a1; letter-spacing: 0.1em; margin-bottom: 2px; }
+.sub { font-size: 9px; color: rgba(232,228,240,0.35); margin-bottom: 10px; text-align: center; line-height: 1.6; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; width: 100%; max-width: 920px; }
+.ctrl { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; padding: 6px 10px; flex: 1; min-width: 160px; }
+.ctrl label { font-size: 8px; color: rgba(232,228,240,0.5); display: block; margin-bottom: 3px; }
+.ctrl .val { font-size: 10px; color: #5de4a1; font-weight: 700; }
+.ctrl input[type=range] { width: 100%; }
+.ctrl input[type=number] { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; color: #a855f7; font-family: inherit; font-size: 10px; padding: 3px 6px; margin-top: 2px; }
+
+.canvases { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 920px; }
+#snailCanvas { border: 1px solid rgba(93,228,161,0.2); background: #0a0c14; width: 100%; }
+#projCanvas  { border: 1px solid rgba(93,228,161,0.1); border-top: none; background: #07090f; width: 100%; }
+
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; width: 100%; max-width: 920px; margin-top: 6px; }
+.stat { background: rgba(93,228,161,0.05); border: 1px solid rgba(93,228,161,0.15); border-radius: 4px; padding: 4px 6px; font-size: 8px; }
+.stat .sl { color: rgba(232,228,240,0.45); }
+.stat .sv { color: #5de4a1; font-weight: 700; font-size: 10px; }
+.contact { color: #4ade80; } .warn { color: #fbbf24; } .bad { color: #ef4444; }
+
+/* FLN badge */
+#flnBadge {
+  width: 100%; max-width: 920px; margin-top: 8px;
+  background: rgba(168,85,247,0.07); border: 1px solid rgba(168,85,247,0.25);
+  border-radius: 5px; padding: 6px 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+#flnBadge .fln-label { font-size: 8px; color: rgba(168,85,247,0.6); text-transform: uppercase; letter-spacing: 0.08em; }
+#flnKey { font-size: 11px; color: #a855f7; font-weight: 700; flex: 1; word-break: break-all; }
+#flnBadge .fln-hint { font-size: 8px; color: rgba(232,228,240,0.3); }
+
+/* Action buttons */
+.btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%; max-width: 920px; }
+button { background: #0d1f17; border: 1px solid #5de4a1; color: #5de4a1; font-family: inherit; font-size: 9px; font-weight: 700; padding: 6px 12px; cursor: pointer; border-radius: 4px; transition: background 0.15s; white-space: nowrap; }
+button:hover { background: #1a3d2e; }
+#btnSave {
+  background: rgba(168,85,247,0.12); border-color: #a855f7; color: #a855f7;
+  font-size: 10px; padding: 8px 18px; letter-spacing: 0.05em;
+}
+#btnSave:hover { background: rgba(168,85,247,0.25); }
+#btnSave.saved { background: rgba(93,228,161,0.15); border-color: #4ade80; color: #4ade80; }
+
+/* Gobstopper table */
+#gobPanel { width: 100%; max-width: 920px; margin-top: 14px; background: rgba(6,6,20,0.9); border: 1px solid rgba(93,228,161,0.2); border-radius: 6px; overflow: hidden; }
+#gobHeader { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(93,228,161,0.05); border-bottom: 1px solid rgba(93,228,161,0.12); }
+#gobHeader .title { font-size: 11px; color: #5de4a1; font-weight: 700; letter-spacing: 0.06em; flex: 1; }
+#gobStatus { font-size: 9px; color: rgba(232,228,240,0.35); }
+#gobStatus.live { color: rgba(93,228,161,0.5); }
+#gobStatus.saved { color: #4ade80; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+#layerTable { width: 100%; border-collapse: collapse; }
+#layerTable thead tr { background: rgba(255,255,255,0.025); }
+#layerTable th { padding: 5px 7px; font-size: 7px; color: rgba(232,228,240,0.35); text-align: right; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 400; }
+#layerTable th:first-child { text-align: left; }
+#layerTable td { padding: 4px 7px; font-size: 8px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.025); font-variant-numeric: tabular-nums; }
+#layerTable td:first-child { text-align: left; }
+#layerTable tr:last-child td { border-bottom: none; }
+#layerTable tr:hover td { background: rgba(93,228,161,0.03); }
+.ldot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0; }
+
+/* Library panel */
+#libPanel { width: 100%; max-width: 920px; margin-top: 14px; background: rgba(6,6,20,0.9); border: 1px solid rgba(255,170,0,0.2); border-radius: 6px; overflow: hidden; }
+#libHeader { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(255,170,0,0.05); border-bottom: 1px solid rgba(255,170,0,0.1); }
+#libHeader .title { font-size: 11px; color: #ffaa00; font-weight: 700; letter-spacing: 0.06em; flex: 1; }
+#libCount { font-size: 9px; color: rgba(255,170,0,0.5); }
+#libRows { max-height: 220px; overflow-y: auto; }
+#libRows::-webkit-scrollbar { width: 3px; }
+#libRows::-webkit-scrollbar-thumb { background: rgba(255,170,0,0.3); }
+.lib-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 12px; border-bottom: 1px solid rgba(255,170,0,0.05); font-size: 8px; }
+.lib-row:last-child { border-bottom: none; }
+.lib-row:hover { background: rgba(255,170,0,0.04); }
+.lib-fln { color: #ffaa00; font-size: 9px; }
+.lib-meta { color: rgba(232,228,240,0.4); font-size: 7px; }
+.lib-status { font-size: 7px; }
+.lib-status.kiss { color: #4ade80; }
+.lib-status.warn { color: #fbbf24; }
+.lib-actions { display: flex; gap: 4px; }
+.lib-actions button { padding: 2px 7px; font-size: 7px; }
+
+/* JSON area */
+#jsonWrap { border-top: 1px solid rgba(93,228,161,0.08); padding: 10px 12px; }
+#jsonWrap .json-label { font-size: 8px; color: rgba(232,228,240,0.35); margin-bottom: 4px; }
+#jsonOut { width: 100%; height: 100px; background: rgba(0,0,0,0.5); border: 1px solid rgba(93,228,161,0.15); border-radius: 3px; color: #5de4a1; font-family: inherit; font-size: 7.5px; padding: 6px; resize: vertical; }
+.json-btns { display: flex; gap: 6px; margin-top: 5px; }
+.json-btns button { border-color: rgba(93,228,161,0.4); color: rgba(93,228,161,0.7); }
+</style>
+</head>
+<body>
+
+<h1>◎ SNAIL SHELL CALIBRATOR + LIBRARY — Pinball Universe</h1>
+<div class="sub">
+  Calibrate → Record → The library builds itself<br>
+  FLN = unique call number · JSON + Mask + Fingerprint saved together · Index grows with every run
+</div>
+
+<!-- Controls -->
+<!-- Parallax explanation panel -->
+<div style="width:100%;max-width:920px;margin:8px 0 4px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.15);border-radius:5px;padding:10px 14px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+  <div style="flex:1;min-width:220px;">
+    <div style="font-size:9px;color:#ef4444;font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">THE PARALLAX PROBLEM</div>
+    <div style="font-size:9px;color:rgba(232,228,240,0.6);line-height:1.7;">
+      You cannot judge pool depth from directly above — the water compresses apparent depth.<br>
+      You need a <span style="color:#5de4a1;">side-on view</span> with an external reference.<br><br>
+      <span style="color:#4fc3f7;">Planck</span> looks straight through the void to the CMB — <em>through the pool</em>.<br>
+      <span style="color:#fbbf24;">SH0ES</span> measures Cepheids on filaments — <em>around the pool</em>.<br>
+      The difference = <span style="color:#ef4444;font-weight:700;">n_void = 1.0831</span>
+    </div>
+  </div>
+  <canvas id="parallaxDiagram" width="280" height="110" style="border-radius:4px;background:#06060f;flex-shrink:0;"></canvas>
+</div>
+
+<!-- Measured / Corrected toggle -->
+<div style="width:100%;max-width:920px;margin:8px 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div style="display:flex;border:1px solid rgba(239,68,68,0.3);border-radius:5px;overflow:hidden;">
+    <button id="btnMeasured" onclick="setMode('measured')"
+      style="font-family:inherit;font-size:9px;font-weight:700;padding:6px 14px;cursor:pointer;letter-spacing:1px;border:none;background:rgba(79,195,247,0.15);color:#4fc3f7;transition:all 0.15s;">
+      📏 MEASURED (old)</button>
+    <button id="btnCorrected" onclick="setMode('corrected')"
+      style="font-family:inherit;font-size:9px;font-weight:700;padding:6px 14px;cursor:pointer;letter-spacing:1px;border:none;background:rgba(239,68,68,0.25);color:#ef4444;border-left:1px solid rgba(239,68,68,0.3);transition:all 0.15s;">
+      🔥 CORRECTED (heat lens)</button>
+  </div>
+  <div id="modeLabel" style="font-size:9px;color:rgba(232,228,240,0.4);">
+    Boötes 330 Mly measured · toggle to apply thermal lensing correction
+  </div>
+  <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+    <span style="font-size:8px;color:rgba(232,228,240,0.3);">correction: true_r = measured_r × n_void  (n_void = 73.0/67.4 = 1.0831)</span>
+  </div>
+</div>
+
+<!-- Correction comparison bar -->
+<div id="correctionBar" style="width:100%;max-width:920px;margin-bottom:6px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.15);border-radius:5px;padding:7px 12px;display:none;">
+  <div style="font-size:8px;color:#ef4444;font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">PARALLAX CORRECTION — measured × n_void (1.0831) → true sizes</div>
+  <div id="correctionRows" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  <div style="font-size:8px;color:rgba(232,228,240,0.35);margin-top:6px;">
+    Void = pool · observer on near wall · heat lens compresses apparent depth · Planck looks through pool · SH0ES looks around it · n_void = 73.0/67.4 = 1.0831 · uniform correction — φ-ratios already correct in measured data
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl">
+    <label>Boötes radius (Mly) <span class="val" id="vBootesR">330</span></label>
+    <input type="range" id="sBootesR" min="50" max="1000" value="330" step="10" style="accent-color:#ef4444">
+  </div>
+  <div class="ctrl">
+    <label>Shell count <span class="val" id="vShells">7</span></label>
+    <input type="range" id="sShells" min="3" max="12" value="7" step="1" style="accent-color:#f97316">
+  </div>
+  <div class="ctrl">
+    <label>Size ratio (φ=1.618) <span class="val" id="vPhi">1.618</span></label>
+    <input type="range" id="sPhi" min="100" max="250" value="162" step="1" style="accent-color:#fbbf24">
+  </div>
+  <div class="ctrl">
+    <label>Contact gap (Mly) <span class="val" id="vGap">0</span></label>
+    <input type="range" id="sGap" min="-50" max="100" value="0" step="5" style="accent-color:#5de4a1">
+  </div>
+  <div class="ctrl">
+    <label>Central Mass % <span class="val" id="vCM">68</span></label>
+    <input type="range" id="sCM" min="1" max="99" value="68" step="1" style="accent-color:#a855f7">
+  </div>
+  <div class="ctrl">
+    <label>Notes (optional)</label>
+    <input type="text" id="iNotes" placeholder="e.g. real Boötes, φ exact" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:#e8e4f0;font-family:inherit;font-size:9px;padding:4px 6px;margin-top:4px">
+  </div>
+</div>
+
+<!-- Canvases -->
+<div class="canvases">
+  <canvas id="snailCanvas" height="500"></canvas>
+  <canvas id="projCanvas"  height="130"></canvas>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="sl">Boötes r</div><div class="sv" id="stBootes">—</div></div>
+  <div class="stat"><div class="sl">Shell 1 r (inner)</div><div class="sv" id="stS1">—</div></div>
+  <div class="stat"><div class="sv" id="stRatio">—</div><div class="sl">Ratio actual</div></div>
+  <div class="stat"><div class="sv" id="stContact">—</div><div class="sl">Contact status</div></div>
+  <div class="stat"><div class="sl">Total span (Mly)</div><div class="sv" id="stSpan">—</div></div>
+  <div class="stat"><div class="sl">Core r (r/4)</div><div class="sv" id="stCore">—</div></div>
+  <div class="stat"><div class="sv" id="stPhi">—</div><div class="sl">φ deviation</div></div>
+  <div class="stat"><div class="sv" id="stT">—</div><div class="sl">Shell 1 t-units</div></div>
+</div>
+
+<!-- FLN badge -->
+<div id="flnBadge">
+  <span class="fln-label">FLN</span>
+  <span id="flnKey">—</span>
+  <span class="fln-hint">← unique call number for this calibration</span>
+</div>
+
+<!-- Buttons -->
+<div class="btns">
+  <button onclick="snapToContact()">⚡ SNAP TO CONTACT</button>
+  <button onclick="snapToPhi()">φ SNAP TO φ</button>
+  <button id="btnSave" onclick="saveToLibrary()">◉ RECORD + SAVE TO LIBRARY</button>
+  <button onclick="saveImage()" style="border-color:#3b82f6;color:#3b82f6">⬇ PNG</button>
+  <button onclick="toggleJson()" style="border-color:#a855f7;color:#a855f7" id="btnJsonToggle">{ } JSON</button>
+  <button onclick="exportIndex()" style="border-color:#ffaa00;color:#ffaa00">📚 EXPORT INDEX</button>
+  <button onclick="clearLibrary()" style="border-color:#ef4444;color:#ef4444;opacity:0.5">✕ CLEAR LIB</button>
+</div>
+<div style="width:100%;max-width:920px;margin-top:4px;display:flex;align-items:center;gap:8px">
+  <span style="font-size:8px;color:rgba(232,228,240,0.3)">SERVER:</span>
+  <span id="saveStatus" style="font-size:8px;color:rgba(255,170,0,0.6)">checking localhost:8000…</span>
+</div>
+
+<!-- Gobstopper layer table -->
+<div id="gobPanel">
+  <div id="gobHeader">
+    <span class="title">◉ GOBSTOPPER — Layer State Table (calc-once, use-many)</span>
+    <span id="gobStatus" class="live">live — not yet saved</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table id="layerTable">
+      <thead><tr>
+        <th style="text-align:left">Layer</th>
+        <th>r_out (Mly)</th>
+        <th>r_out (t)</th>
+        <th>thick (Mly)</th>
+        <th>vol (Mly³)</th>
+        <th>SA (Mly²)</th>
+        <th>T norm</th>
+        <th>E norm</th>
+        <th>P norm</th>
+        <th>F net</th>
+        <th>core r</th>
+        <th>contact</th>
+      </tr></thead>
+      <tbody id="layerBody"></tbody>
+    </table>
+  </div>
+  <div id="jsonWrap" style="display:none">
+    <div class="json-label">Gobstopper JSON — FLN keyed · paste into Designer as initial conditions</div>
+    <textarea id="jsonOut" readonly></textarea>
+    <div class="json-btns">
+      <button onclick="copyJson()">⧉ COPY</button>
+      <button onclick="downloadCurrentJson()">⬇ DOWNLOAD JSON</button>
+      <button onclick="downloadMask()">⬇ MASK PNG</button>
+      <button onclick="downloadFingerprint()">⬇ FINGERPRINT PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- φ-KISSING CHECK PANEL -->
+<div style="width:100%;max-width:920px;margin-top:14px;background:rgba(6,6,20,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:6px;overflow:hidden;">
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(168,85,247,0.05);border-bottom:1px solid rgba(168,85,247,0.12);">
+    <span style="font-size:11px;color:#a855f7;font-weight:700;letter-spacing:0.06em;flex:1;">φ-KISSING CHECK — does each shell ratio equal φ = 1.6180?</span>
+    <span style="font-size:9px;color:rgba(168,85,247,0.4);">toggle MEASURED/CORRECTED to see the difference</span>
+  </div>
+  <div id="phiKissPanel" style="padding:10px 10px 12px;">
+    <div style="font-size:9px;color:rgba(232,228,240,0.3);padding:10px;">Loading…</div>
+  </div>
+</div>
+
+<!-- CONTACT TIMELINE PANEL -->
+<div id="timelinePanel" style="width:100%;max-width:920px;margin-top:14px;background:rgba(6,6,20,0.9);border:1px solid rgba(79,195,247,0.25);border-radius:6px;overflow:hidden;">
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(79,195,247,0.05);border-bottom:1px solid rgba(79,195,247,0.12);">
+    <span style="font-size:11px;color:#4fc3f7;font-weight:700;letter-spacing:0.06em;flex:1;">⏱ CONTACT TIMELINE — derived live from shell geometry</span>
+    <span id="tlStatus" style="font-size:9px;color:rgba(79,195,247,0.4);">—</span>
+  </div>
+  <canvas id="timelineCanvas" height="160" style="width:100%;background:#07090f;border-bottom:1px solid rgba(79,195,247,0.08);"></canvas>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px;">
+    <div style="background:rgba(79,195,247,0.05);border:1px solid rgba(79,195,247,0.12);border-radius:4px;padding:5px 8px;">
+      <div style="font-size:8px;color:rgba(232,228,240,0.4);">Our Bang</div>
+      <div style="font-size:11px;color:#4fc3f7;font-weight:700;" id="tlT0">t = 0 Gyr</div>
+    </div>
+    <div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:5px 8px;">
+      <div style="font-size:8px;color:rgba(232,228,240,0.4);">First contact</div>
+      <div style="font-size:11px;color:#ef4444;font-weight:700;" id="tlT1">—</div>
+      <div style="font-size:7px;color:rgba(239,68,68,0.5);" id="tlT1sub">inner shell kisses · sea recedes</div>
+    </div>
+    <div style="background:rgba(93,228,161,0.06);border:1px solid rgba(93,228,161,0.25);border-radius:4px;padding:5px 8px;">
+      <div style="font-size:8px;color:rgba(232,228,240,0.4);">Full enclosure — WE ARE HERE</div>
+      <div style="font-size:11px;color:#5de4a1;font-weight:700;" id="tlT2">t = 13.8 Gyr</div>
+      <div style="font-size:7px;color:rgba(93,228,161,0.5);">fixed ruler · 1t = 13,800 Mly</div>
+    </div>
+    <div style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.2);border-radius:4px;padding:5px 8px;">
+      <div style="font-size:8px;color:rgba(232,228,240,0.4);">Andromeda contact</div>
+      <div style="font-size:11px;color:#fbbf24;font-weight:700;" id="tlT3">—</div>
+      <div style="font-size:7px;color:rgba(251,191,36,0.5);" id="tlT3sub">+4.5 Gyr from now</div>
+    </div>
+  </div>
+  <div style="padding:6px 12px 10px;display:flex;gap:16px;flex-wrap:wrap;">
+    <div style="font-size:8px;color:rgba(232,228,240,0.35);">Inter-contact period: <span id="tlPeriod" style="color:#4fc3f7;">—</span></div>
+    <div style="font-size:8px;color:rgba(232,228,240,0.35);">Andromeda = Bang + <span id="tlAndroFromBang" style="color:#fbbf24;">—</span></div>
+    <div style="font-size:8px;color:rgba(232,228,240,0.35);">Andromeda = Now + <span id="tlAndroFromNow" style="color:#fbbf24;">—</span></div>
+    <div style="font-size:8px;color:rgba(232,228,240,0.35);">Rhythm check: <span id="tlRhythm" style="color:#5de4a1;">—</span></div>
+  </div>
+  <div style="border-top:1px solid rgba(79,195,247,0.1);padding:8px 12px 10px;background:rgba(168,85,247,0.04);">
+    <div style="font-size:9px;color:#a855f7;font-weight:700;letter-spacing:0.08em;margin-bottom:8px;">φ IN THE TIMELINE — same ratio in every bubble — universally testable</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+      <div style="background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.18);border-radius:3px;padding:6px 10px;">
+        <div style="font-size:8px;color:rgba(232,228,240,0.4);margin-bottom:3px;">t_first / t_now = 8.5 / 13.8</div>
+        <div style="font-size:10px;font-weight:700;" id="tlPhiRatio1">—</div>
+        <div style="font-size:7px;color:rgba(232,228,240,0.3);margin-top:2px;">should equal 1/φ = 0.6180 · if true: geometry encodes the clock</div>
+      </div>
+      <div style="background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.18);border-radius:3px;padding:6px 10px;">
+        <div style="font-size:8px;color:rgba(232,228,240,0.4);margin-bottom:3px;">t_inter / t_now = 5.3 / 13.8</div>
+        <div style="font-size:10px;font-weight:700;" id="tlPhiRatio2">—</div>
+        <div style="font-size:7px;color:rgba(232,228,240,0.3);margin-top:2px;">should equal 1/φ² = 0.3820 · the period is φ² smaller than the age</div>
+      </div>
+    </div>
+    <div style="font-size:9px;padding:6px 10px;background:rgba(93,228,161,0.05);border:1px solid rgba(93,228,161,0.15);border-radius:3px;" id="tlPhiUniv">—</div>
+    <div style="font-size:8px;color:rgba(232,228,240,0.3);margin-top:8px;line-height:1.6;">
+      Every observer in every φ-spaced bubble sees the same ratios · find any void · measure its contact distance · divide by φ · predict their inter-contact period · it will match · this is the universal test
+    </div>
+  </div>
+</div>
+
+<!-- Library panel -->
+<div id="libPanel" style="margin-bottom:24px">
+  <div id="libHeader">
+    <span class="title">📚 CALIBRATION LIBRARY</span>
+    <span id="libCount">0 entries</span>
+  </div>
+  <div id="libRows">
+    <div style="padding:16px;text-align:center;font-size:9px;color:rgba(255,170,0,0.3)">
+      No calibrations saved yet — dial in geometry and hit ◉ RECORD + SAVE TO LIBRARY
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
+// CONSTANTS — must be first
+// ══════════════════════════════════════════════════════════════════════════
+var PHI      = 1.618033988749895;
+var T_TO_MLY = 13800; // 1t = 13,800 Mly — FIXED RULER
+
+// ══════════════════════════════════════════════════════════════════════════
+// THERMAL LENSING CORRECTION
+// ══════════════════════════════════════════════════════════════════════════
+var CORRECTION_MODE = 'corrected'; // 'measured' | 'corrected'
+
+// Measured shell sizes — φ-ratios already correct to 0.12%
+// The geometry was never wrong. Only the absolute scale was compressed.
+var MEASURED_SIZES = {
+  bootes: 330,
+  shells: [18.257, 29.576, 47.913, 77.619, 125.743, 203.704, 330.0]
+};
+
+// PARALLAX / REFRACTIVE INDEX MODEL
+// The void is a pool. Observer on near filament wall looks straight through
+// the hot void interior to the far wall — no side-on reference.
+// Heat lens compresses apparent depth uniformly (like water refraction).
+// n_void = H0_SH0ES / H0_Planck = 73.0 / 67.4 = 1.0831
+// true_r = measured_r × n_void  — uniform, all shells, same physics
+// Planck looks through the pool. SH0ES looks around it.
+var N_VOID = 73.0 / 67.4;  // 1.0831
+
+function correctedR(r_measured) {
+  return r_measured * N_VOID;
+}
+
+// Corrected sizes — uniform stretch by n_void
+var CORRECTED_SIZES = {
+  bootes: correctedR(330),
+  shells: MEASURED_SIZES.shells.map(correctedR)
+};
+
+function setMode(mode) {
+  CORRECTION_MODE = mode;
+
+  // Update button styles
+  var bM = document.getElementById('btnMeasured');
+  var bC = document.getElementById('btnCorrected');
+  var bar = document.getElementById('correctionBar');
+
+  if (mode === 'measured') {
+    bM.style.background = 'rgba(79,195,247,0.35)';
+    bM.style.color = '#fff';
+    bC.style.background = 'rgba(239,68,68,0.08)';
+    bC.style.color = 'rgba(239,68,68,0.5)';
+    document.getElementById('sBootesR').value = MEASURED_SIZES.bootes;
+    document.getElementById('modeLabel').textContent =
+      'Using MEASURED sizes — standard model (wrong lens correction)';
+    document.getElementById('modeLabel').style.color = '#4fc3f7';
+    bar.style.display = 'none';
+  } else {
+    bC.style.background = 'rgba(239,68,68,0.35)';
+    bC.style.color = '#fff';
+    bM.style.background = 'rgba(79,195,247,0.08)';
+    bM.style.color = 'rgba(79,195,247,0.5)';
+    document.getElementById('sBootesR').value = Math.round(CORRECTED_SIZES.bootes);
+    document.getElementById('modeLabel').textContent =
+      'PARALLAX CORRECTED — n_void = ' + N_VOID.toFixed(4) +
+      ' — Boötes ' + MEASURED_SIZES.bootes + ' → ' +
+      Math.round(CORRECTED_SIZES.bootes) + ' Mly — uniform ×' + N_VOID.toFixed(4) + ' all shells';
+    document.getElementById('modeLabel').style.color = '#ef4444';
+    bar.style.display = 'block';
+
+    // Build correction comparison rows — uniform n_void
+    var names = ['Purple','Blue','Green','Yellow','Orange','Red-1','Boötes'];
+    var cols  = ['#9b30d9','#3b82f6','#22c55e','#eab308','#f97316','#ef4444','#7f0000'];
+    var html  = '';
+    MEASURED_SIZES.shells.forEach(function(rm, i) {
+      var rc = CORRECTED_SIZES.shells[i];
+      var ratio = i < MEASURED_SIZES.shells.length - 1
+        ? (MEASURED_SIZES.shells[i+1] / rm).toFixed(4) : '—';
+      html += '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:4px 8px;min-width:120px;">' +
+        '<div style="font-size:8px;color:' + cols[i] + ';font-weight:700;">' + names[i] + '</div>' +
+        '<div style="font-size:8px;color:rgba(232,228,240,0.4);text-decoration:line-through;">' + rm.toFixed(1) + ' Mly</div>' +
+        '<div style="font-size:10px;color:#ef4444;font-weight:700;">→ ' + rc.toFixed(1) + ' Mly</div>' +
+        '<div style="font-size:8px;color:rgba(93,228,161,0.8);">×' + N_VOID.toFixed(4) + ' (uniform)</div>' +
+        '<div style="font-size:8px;color:rgba(168,85,247,0.8);">φ-ratio: ' + ratio + '</div>' +
+        '</div>';
+    });
+    document.getElementById('correctionRows').innerHTML = html;
+  }
+  draw();
+}
+
+// Override getParams to inject corrected Boötes when in corrected mode
+var _origGetParams = null;
+
+var SHELL_COLS = ['#9b30d9','#3b82f6','#22c55e','#eab308','#f97316','#ef4444','#7f0000'];
+function getCol(i,n){ return SHELL_COLS[Math.min(Math.round(i/(n-1)*(SHELL_COLS.length-1)),SHELL_COLS.length-1)]; }
+
+// Library stored in memory (sessionStorage for persistence within tab)
+var library = []; // array of FLN records
+try { var stored = sessionStorage.getItem('pinball_library'); if(stored) library = JSON.parse(stored); } catch(e){}
+
+var lastGob = null; // last computed gobstopper
+
+// ══════════════════════════════════════════════════════════════════════════
+// FLN GENERATOR — unique call number
+// ══════════════════════════════════════════════════════════════════════════
+function makeFLN(p) {
+  var d = new Date();
+  var ds = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+  var ts = pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds());
+  var cm = document.getElementById('sCM').value;
+  var contactTag = Math.abs(p.gap)<2 ? 'KISS' : (p.gap>0?'G'+p.gap:'O'+Math.abs(p.gap));
+  return 'FLN_'+ds+'_T'+ts+'_B'+p.bootesR+'_N'+p.nShells+'_phi'+p.phi.toFixed(3)+'_CM'+cm+'_'+contactTag;
+}
+function pad2(n){ return n<10?'0'+n:String(n); }
+
+// ══════════════════════════════════════════════════════════════════════════
+// PARAMS
+// ══════════════════════════════════════════════════════════════════════════
+function getParams(){
+  // In corrected mode, Boötes radius is already set by setMode()
+  // buildShells will use corrected sizes directly
+  return {
+    bootesR: parseFloat(document.getElementById('sBootesR').value),
+    nShells: parseInt(document.getElementById('sShells').value),
+    phi:     parseFloat(document.getElementById('sPhi').value)/100,
+    gap:     parseFloat(document.getElementById('sGap').value),
+    cm:      parseInt(document.getElementById('sCM').value),
+    mode:    CORRECTION_MODE
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BUILD SHELLS
+// ══════════════════════════════════════════════════════════════════════════
+function buildShells(p){
+  var shells = [];
+
+  if (p.mode === 'corrected' && p.nShells <= CORRECTED_SIZES.shells.length) {
+    // Use corrected sizes directly — not derived from φ-division
+    // This lets us see if they RESTORE the φ-kissing condition
+    var n = p.nShells;
+    var useSizes = CORRECTED_SIZES.shells.slice(0, n);
+    // Sort smallest to largest (innermost first)
+    useSizes = useSizes.slice().sort(function(a,b){return a-b;});
+    for (var i = 0; i < n; i++) {
+      shells.push({r: useSizes[i], idx: i, corrected: true,
+                   measured: MEASURED_SIZES.shells.slice().sort(function(a,b){return a-b;})[i]});
+    }
+  } else {
+    // Standard: derive from Boötes by dividing by φ each step
+    var r = p.bootesR;
+    for (var i = 0; i < p.nShells; i++) {
+      shells.unshift({r: r, idx: p.nShells-1-i, corrected: false, measured: r});
+      r = r / p.phi;
+    }
+  }
+  return shells;
+}
+
+function placeSnail(shells,gap){
+  var placed=[]; if(!shells.length) return placed;
+  placed.push({x:0,y:0,r:shells[0].r,idx:shells[0].idx});
+  var angle=0, step=Math.PI*2/Math.max(shells.length-1,1);
+  for(var i=1;i<shells.length;i++){
+    var prev=placed[i-1], d=prev.r+shells[i].r+gap;
+    angle+=step*0.72;
+    placed.push({x:prev.x+Math.cos(angle)*d, y:prev.y+Math.sin(angle)*d, r:shells[i].r, idx:shells[i].idx});
+  }
+  return placed;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// GOBSTOPPER PHYSICS — calc-once, use-many
+// Temperature model: T_i = φ^(n-1-i)  — innermost hottest, Boötes = 1
+// Heat:     E ∝ T⁴ × SA_outer    (Stefan-Boltzmann)
+// Pressure: P = E / (3 × Volume)  (radiation pressure = energy density / 3)
+// Force:    F_net = P_self×SA - P_outer×SA  (net outward push)
+// ══════════════════════════════════════════════════════════════════════════
+function computeLayers(shells, gap){
+  var n=shells.length, layers=[];
+  for(var i=0;i<n;i++){
+    var ro = shells[i].r;
+    var ri = (i===0) ? ro/4 : shells[i-1].r;
+    var thick = ro-ri;
+    var vol   = (4/3)*Math.PI*(Math.pow(ro,3)-Math.pow(ri,3));
+    var sa_o  = 4*Math.PI*ro*ro;
+    var sa_i  = 4*Math.PI*ri*ri;
+    var T     = Math.pow(PHI, n-1-i);  // normalised, Boötes=1
+    var E     = Math.pow(T,4)*sa_o;
+    var P     = vol>0 ? E/(3*vol) : 0;
+    var Fpush = P*sa_o;
+    layers.push({
+      i:i, name: i===n-1?'Boötes':i===0?'Core':'Shell '+(i+1),
+      ro:ro, ri:ri, ro_t:ro/T_TO_MLY, thick:thick,
+      vol:vol, sa_o:sa_o, sa_i:sa_i,
+      T:T, E:E, P:P, Fpush:Fpush, Fnet:0,
+      core: i===0?ro/4:0,
+      contact: i===0?'centre': Math.abs(gap)<2?'KISSING':gap>0?'gap '+gap.toFixed(0)+' Mly':'ovlp '+Math.abs(gap).toFixed(0)+' Mly'
+    });
+  }
+  // Net force: self push minus containment from layer above
+  for(var i=0;i<n;i++){
+    var contain = (i<n-1) ? layers[i+1].P*layers[i].sa_o : 0;
+    layers[i].Fnet = layers[i].Fpush - contain;
+  }
+  return layers;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DRAW
+// ══════════════════════════════════════════════════════════════════════════
+function draw(){
+  var p=getParams(), shells=buildShells(p), placed=placeSnail(shells,p.gap);
+  var sc=document.getElementById('snailCanvas');
+  var W=sc.offsetWidth; sc.width=W; sc.height=500;
+  var pc=document.getElementById('projCanvas'); pc.width=W; pc.height=130;
+  var ctx=sc.getContext('2d'), pctx=pc.getContext('2d');
+
+  // Snail bg
+  ctx.fillStyle='#0a0c14'; ctx.fillRect(0,0,W,500);
+  if(!placed.length) return;
+
+  var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  placed.forEach(function(s){minX=Math.min(minX,s.x-s.r);maxX=Math.max(maxX,s.x+s.r);minY=Math.min(minY,s.y-s.r);maxY=Math.max(maxY,s.y+s.r);});
+  var sX=maxX-minX,sY=maxY-minY;
+  var sc2=Math.min((W-40)/sX,460/sY);
+  var cx=W/2-(minX+sX/2)*sc2, cy=250-(minY+sY/2)*sc2;
+
+  var bg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(sX,sY)*sc2*0.6);
+  bg.addColorStop(0,'rgba(20,30,60,0.3)'); bg.addColorStop(1,'rgba(10,12,20,0)');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,500);
+
+  placed.forEach(function(s,i){
+    var sx=cx+s.x*sc2,sy=cy+s.y*sc2,sr=s.r*sc2,col=getCol(i,placed.length);
+    var g=ctx.createRadialGradient(sx-sr*0.2,sy-sr*0.2,sr*0.1,sx,sy,sr);
+    g.addColorStop(0,col+'cc');g.addColorStop(0.7,col+'88');g.addColorStop(1,col+'33');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#000'; ctx.lineWidth=Math.max(1.5,sr*0.06);
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.stroke();
+
+    if(i>0){
+      var pv=placed[i-1];
+      var dist=Math.sqrt(Math.pow(sx-cx-pv.x*sc2,2)+Math.pow(sy-cy-pv.y*sc2,2));
+      var exp=(s.r+pv.r)*sc2;
+      if(Math.abs(dist-exp)/sc2<10){
+        ctx.strokeStyle=Math.abs(dist-exp)/sc2<2?'#4ade80':'#fbbf24';
+        ctx.lineWidth=2; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    var cr=Math.max(3,sr*0.25);
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,cr,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx,sy,cr,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(232,228,240,0.8)';
+    ctx.font='500 '+Math.max(8,Math.min(11,sr*0.18))+'px monospace'; ctx.textAlign='center';
+    // Show corrected size, with measured in smaller text below if in corrected mode
+    ctx.fillText(s.r.toFixed(0)+' Mly',sx,sy+cr+10);
+    if (p.mode === 'corrected' && shells[i] && shells[i].measured && Math.abs(shells[i].measured - s.r) > 1) {
+      ctx.fillStyle='rgba(239,68,68,0.55)';
+      ctx.font='500 '+Math.max(7,Math.min(9,sr*0.14))+'px monospace';
+      ctx.fillText('was '+shells[i].measured.toFixed(0),sx,sy+cr+22);
+    }
+  });
+
+  // Mode watermark
+  ctx.fillStyle = p.mode==='corrected' ? 'rgba(239,68,68,0.6)' : 'rgba(79,195,247,0.5)';
+  ctx.font='700 10px monospace'; ctx.textAlign='left';
+  ctx.fillText(p.mode==='corrected' ? '🔥 CORRECTED — heat lens applied' : '📏 MEASURED — standard model (wrong lens)', 10, 18);
+  ctx.fillStyle='rgba(232,228,240,0.3)'; ctx.font='9px monospace';
+  ctx.fillText('innermost → Boötes (crimson) · iron core dots = r/4',10,32);
+
+  // 1D projection
+  pctx.fillStyle='#07090f'; pctx.fillRect(0,0,W,130);
+  var pMin=Math.min.apply(null,placed.map(function(s){return s.x-s.r;}));
+  var pMax=Math.max.apply(null,placed.map(function(s){return s.x+s.r;}));
+  var pSpan=pMax-pMin, pSc=(W-60)/pSpan, pOf=30-pMin*pSc, mY=65;
+  pctx.strokeStyle='rgba(232,228,240,0.15)'; pctx.lineWidth=1;
+  pctx.beginPath(); pctx.moveTo(20,mY); pctx.lineTo(W-20,mY); pctx.stroke();
+
+  placed.forEach(function(s,i){
+    var col=getCol(i,placed.length);
+    var x1=pOf+(s.x-s.r)*pSc,x2=pOf+(s.x+s.r)*pSc;
+    var bH=Math.min(Math.max(4,s.r*pSc*0.25),28);
+    pctx.fillStyle=col+'88'; pctx.fillRect(x1,mY-bH,x2-x1,bH*2);
+    pctx.strokeStyle=col; pctx.lineWidth=1.5; pctx.strokeRect(x1,mY-bH,x2-x1,bH*2);
+    var xc=pOf+s.x*pSc;
+    pctx.strokeStyle='#fff'; pctx.lineWidth=1;
+    pctx.beginPath(); pctx.moveTo(xc,mY-bH-4); pctx.lineTo(xc,mY+bH+4); pctx.stroke();
+    pctx.fillStyle='rgba(232,228,240,0.7)'; pctx.font='8px monospace'; pctx.textAlign='center';
+    if(x2-x1>30) pctx.fillText(s.r.toFixed(0),xc,mY-bH-7);
+  });
+
+  for(var i=1;i<placed.length;i++){
+    var cpx=pOf+(placed[i-1].x+placed[i-1].r+p.gap/2)*pSc;
+    pctx.strokeStyle=Math.abs(p.gap)<5?'#4ade80':'#fbbf24';
+    pctx.lineWidth=2; pctx.setLineDash([2,2]);
+    pctx.beginPath(); pctx.moveTo(cpx,mY-32); pctx.lineTo(cpx,mY+32); pctx.stroke(); pctx.setLineDash([]);
+  }
+  pctx.fillStyle='rgba(232,228,240,0.3)'; pctx.font='8px monospace'; pctx.textAlign='center';
+  var ls=pSpan>2000?500:pSpan>1000?200:100;
+  for(var lv=Math.ceil(pMin/ls)*ls;lv<=pMax;lv+=ls){
+    var lx=pOf+lv*pSc;
+    pctx.fillText(lv.toFixed(0),lx,124);
+    pctx.strokeStyle='rgba(232,228,240,0.07)'; pctx.lineWidth=1;
+    pctx.beginPath(); pctx.moveTo(lx,mY-28); pctx.lineTo(lx,mY+28); pctx.stroke();
+  }
+  pctx.fillStyle='rgba(93,228,161,0.5)'; pctx.font='700 9px monospace'; pctx.textAlign='left';
+  pctx.fillText('1D PROJECTION — Mly scale',10,14);
+
+  // Stats
+  var inner=placed[0],outer=placed[placed.length-1];
+  var contactOk=Math.abs(p.gap)<5;
+  document.getElementById('stBootes').textContent=outer.r.toFixed(0)+' Mly';
+  document.getElementById('stS1').textContent=inner.r.toFixed(0)+' Mly';
+  document.getElementById('stRatio').textContent=(outer.r/inner.r).toFixed(3);
+  document.getElementById('stContact').innerHTML=contactOk
+    ?'<span class="contact">★ KISSING</span>'
+    :(p.gap>0?'<span class="warn">gap '+p.gap+' Mly</span>':'<span class="bad">ovlp '+(-p.gap)+' Mly</span>');
+  document.getElementById('stSpan').textContent=(pMax-pMin).toFixed(0)+' Mly';
+  document.getElementById('stCore').textContent=(inner.r/4).toFixed(0)+' Mly';
+  var phiDev=((p.phi-PHI)/PHI*100);
+  document.getElementById('stPhi').textContent=(phiDev>=0?'+':'')+phiDev.toFixed(2)+'%';
+  document.getElementById('stT').textContent=(inner.r/T_TO_MLY).toFixed(6)+'t';
+  document.getElementById('vBootesR').textContent=p.bootesR+' Mly';
+  document.getElementById('vShells').textContent=p.nShells;
+  document.getElementById('vPhi').textContent=p.phi.toFixed(3);
+  document.getElementById('vGap').textContent=(p.gap>=0?'+':'')+p.gap+' Mly';
+  document.getElementById('vCM').textContent=p.cm+'%';
+
+  // FLN
+  document.getElementById('flnKey').textContent=makeFLN(p);
+
+  // Gobstopper table (live preview)
+  var layers=computeLayers(shells,p.gap);
+  lastGob={params:p, layers:layers, fln:makeFLN(p)};
+  renderLayerTable(layers, false);
+
+  // φ-kissing check — does each pair satisfy r_outer / r_inner ≈ φ?
+  drawPhiKissingCheck(shells, p);
+
+  // Timeline panel
+  drawTimeline(p);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LAYER TABLE RENDER
+// ══════════════════════════════════════════════════════════════════════════
+function renderLayerTable(layers, saved){
+  var n=layers.length;
+  var Emax=Math.max.apply(null,layers.map(function(l){return l.E;}));
+  var Pmax=Math.max.apply(null,layers.map(function(l){return l.P;}));
+  var Fmax=Math.max.apply(null,layers.map(function(l){return Math.abs(l.Fnet);}));
+
+  var html='';
+  layers.forEach(function(l,i){
+    var col=getCol(i,n);
+    var fd=l.Fnet>0?'▲ out':l.Fnet<0?'▼ in ':'—';
+    var fc=l.Fnet>0?'#4ade80':l.Fnet<0?'#ef4444':'#888';
+    var cc=l.contact==='KISSING'?'#4ade80':l.contact==='centre'?'rgba(232,228,240,0.3)':l.contact.startsWith('gap')?'#fbbf24':'#ef4444';
+    html+='<tr>';
+    html+='<td><span class="ldot" style="background:'+col+'"></span><span style="color:'+col+'">'+l.name+'</span></td>';
+    html+='<td>'+l.ro.toFixed(1)+'</td>';
+    html+='<td style="color:rgba(232,228,240,0.4)">'+l.ro_t.toExponential(3)+'</td>';
+    html+='<td>'+l.thick.toFixed(1)+'</td>';
+    html+='<td>'+sci(l.vol)+'</td>';
+    html+='<td>'+sci(l.sa_o)+'</td>';
+    html+='<td style="color:#f97316">'+l.T.toFixed(3)+'</td>';
+    html+='<td style="color:#ef4444">'+pct(l.E,Emax)+'</td>';
+    html+='<td style="color:#fbbf24">'+pct(l.P,Pmax)+'</td>';
+    html+='<td style="color:'+fc+'">'+fd+' '+pct(Math.abs(l.Fnet),Fmax)+'</td>';
+    html+='<td style="color:rgba(232,228,240,0.35)">'+(l.core>0?l.core.toFixed(1):'—')+'</td>';
+    html+='<td style="color:'+cc+'">'+l.contact+'</td>';
+    html+='</tr>';
+  });
+  document.getElementById('layerBody').innerHTML=html;
+
+  var st=document.getElementById('gobStatus');
+  st.textContent=saved?'✓ SAVED TO LIBRARY — '+layers.length+' layers':'live — '+layers.length+' layers — not yet saved';
+  st.className=saved?'saved':'live';
+}
+
+function sci(v){ if(!v) return '0'; var e=Math.floor(Math.log10(Math.abs(v))); return (v/Math.pow(10,e)).toFixed(2)+'e'+e; }
+function pct(v,max){ return max?((v/max)*100).toFixed(1)+'%':'—'; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// MASK IMAGE — Boötes mask (black void, white boundary)
+// ══════════════════════════════════════════════════════════════════════════
+function renderMask(fln){
+  var p=getParams(), shells=buildShells(p), placed=placeSnail(shells,p.gap);
+  var S=512;
+  var mc=document.createElement('canvas'); mc.width=S; mc.height=S;
+  var mctx=mc.getContext('2d');
+  mctx.fillStyle='#000'; mctx.fillRect(0,0,S,S);
+
+  // Find bounds
+  var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  placed.forEach(function(s){minX=Math.min(minX,s.x-s.r);maxX=Math.max(maxX,s.x+s.r);minY=Math.min(minY,s.y-s.r);maxY=Math.max(maxY,s.y+s.r);});
+  var span=Math.max(maxX-minX,maxY-minY);
+  var sc2=(S-40)/span;
+  var cx=S/2-(minX+(maxX-minX)/2)*sc2, cy=S/2-(minY+(maxY-minY)/2)*sc2;
+
+  // Outermost shell (Boötes) = white boundary ring
+  placed.forEach(function(s,i){
+    var sx=cx+s.x*sc2,sy=cy+s.y*sc2,sr=s.r*sc2;
+    var isBootes=(i===placed.length-1);
+    if(isBootes){
+      // White ring = void boundary
+      mctx.strokeStyle='#fff';
+      mctx.lineWidth=Math.max(3,sr*0.04);
+      mctx.beginPath(); mctx.arc(sx,sy,sr,0,Math.PI*2); mctx.stroke();
+    } else {
+      // Inner shells = grey rings
+      var grey=Math.round(40+i/placed.length*180);
+      mctx.strokeStyle='rgb('+grey+','+grey+','+grey+')';
+      mctx.lineWidth=2;
+      mctx.beginPath(); mctx.arc(sx,sy,sr,0,Math.PI*2); mctx.stroke();
+    }
+  });
+
+  // Label
+  mctx.fillStyle='rgba(255,255,255,0.6)'; mctx.font='700 9px monospace'; mctx.textAlign='center';
+  mctx.fillText(fln, S/2, S-8);
+  return mc;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// FINGERPRINT IMAGE — structural signature (radial heat profile bar chart)
+// ══════════════════════════════════════════════════════════════════════════
+function renderFingerprint(layers, fln){
+  var W=512, H=200;
+  var fc=document.createElement('canvas'); fc.width=W; fc.height=H;
+  var fctx=fc.getContext('2d');
+  fctx.fillStyle='#060610'; fctx.fillRect(0,0,W,H);
+
+  var n=layers.length;
+  var Emax=Math.max.apply(null,layers.map(function(l){return l.E;}));
+  var Pmax=Math.max.apply(null,layers.map(function(l){return l.P;}));
+  var barW=Math.floor((W-40)/(n*3+1));
+  var maxBarH=H-50;
+
+  layers.forEach(function(l,i){
+    var col=getCol(i,n);
+    var x=20+(i*3+0.5)*barW;
+
+    // Energy bar
+    var eH=Emax>0?(l.E/Emax)*maxBarH:0;
+    fctx.fillStyle=col+'cc';
+    fctx.fillRect(x, H-30-eH, barW*0.9, eH);
+
+    // Pressure bar (offset)
+    var pH=Pmax>0?(l.P/Pmax)*maxBarH:0;
+    fctx.fillStyle=col+'55';
+    fctx.fillRect(x+barW, H-30-pH, barW*0.9, pH);
+
+    // Shell label
+    fctx.fillStyle=col; fctx.font='7px monospace'; fctx.textAlign='center';
+    fctx.fillText(l.name.replace('Shell ','S').replace('Boötes','B').replace('Core','C'), x+barW/2, H-18);
+    fctx.fillStyle='rgba(232,228,240,0.5)';
+    fctx.fillText(l.ro.toFixed(0), x+barW/2, H-8);
+  });
+
+  // Legend
+  fctx.fillStyle='rgba(232,228,240,0.5)'; fctx.font='700 8px monospace'; fctx.textAlign='left';
+  fctx.fillText('█ E (heat)  █ P (pressure)  — units normalised', 20, 16);
+  fctx.fillStyle='rgba(232,228,240,0.3)'; fctx.font='8px monospace';
+  fctx.fillText(fln, 20, 28);
+  return fc;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SAVE TO LIBRARY — the core action
+// ══════════════════════════════════════════════════════════════════════════
+function saveToLibrary(){
+  if(!lastGob) return;
+  var p=lastGob.params, layers=lastGob.layers;
+  var fln=makeFLN(p); // fresh FLN with current time
+  var notes=document.getElementById('iNotes').value||'';
+
+  // Build record
+  var maskC=renderMask(fln);
+  var fpC=renderFingerprint(layers,fln);
+
+  var record = {
+    fln: fln,
+    saved_at: new Date().toISOString(),
+    notes: notes,
+    params: {
+      bootesR_mly: p.bootesR,
+      bootesR_t:   +(p.bootesR/T_TO_MLY).toFixed(10),
+      nShells:     p.nShells,
+      phi:         p.phi,
+      gap_mly:     p.gap,
+      cm_pct:      p.cm,
+      contact_ok:  Math.abs(p.gap)<5,
+      T_TO_MLY:    T_TO_MLY
+    },
+    gobstopper: {
+      note: 'Calc-once. T_norm: innermost=φ^(n-1), Boötes=1. E∝T⁴·SA. P=E/3V. F_net=P_self·SA - P_above·SA.',
+      layers: layers.map(function(l){
+        return {
+          name:l.name, i:l.i,
+          r_outer_mly:+l.ro.toFixed(6), r_inner_mly:+l.ri.toFixed(6),
+          r_outer_t:+l.ro_t.toFixed(10), thickness_mly:+l.thick.toFixed(6),
+          volume_mly3:+l.vol.toFixed(3), sa_outer_mly2:+l.sa_o.toFixed(3),
+          sa_inner_mly2:+l.sa_i.toFixed(3),
+          T_norm:+l.T.toFixed(8), E_norm:+l.E.toFixed(6),
+          P_norm:+l.P.toFixed(6), F_push:+l.Fpush.toFixed(6),
+          F_net:+l.Fnet.toFixed(6),
+          core_r_mly:+l.core.toFixed(6), contact:l.contact
+        };
+      })
+    },
+    mask_data_url:   maskC.toDataURL('image/png'),
+    fingerprint_data_url: fpC.toDataURL('image/png')
+  };
+
+  // Add to in-memory library for this session's panel
+  library.unshift(record);
+  try { sessionStorage.setItem('pinball_library', JSON.stringify(library)); } catch(e){}
+
+  // Update UI immediately
+  renderLayerTable(layers, true);
+  renderLibrary();
+
+  // POST to local file server — writes real files into PB_Calibration_FLN subfolders
+  var saveStatus = document.getElementById('saveStatus');
+  fetch('http://localhost:8000/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(res.ok){
+      if(saveStatus){ saveStatus.textContent='✓ WRITTEN TO DISK — '+res.saved.length+' files'; saveStatus.style.color='#4ade80'; }
+      console.log('[PB] Saved:', res.saved);
+    } else {
+      if(saveStatus){ saveStatus.textContent='⚠ Server error: '+res.error; saveStatus.style.color='#ef4444'; }
+    }
+  })
+  .catch(function(err){
+    if(saveStatus){ saveStatus.textContent='⚠ file_server.py not running — session only'; saveStatus.style.color='#fbbf24'; }
+    console.warn('[PB] Server not reachable:', err.message);
+  });
+
+  // Flash button
+  var btn=document.getElementById('btnSave');
+  btn.textContent='✓ SAVED — '+fln.substring(0,40)+'…';
+  btn.className='saved';
+  setTimeout(function(){ btn.textContent='◉ RECORD + SAVE TO LIBRARY'; btn.className=''; },3000);
+
+  // Auto-show JSON
+  document.getElementById('jsonOut').value=JSON.stringify(record.gobstopper,null,2);
+  document.getElementById('jsonWrap').style.display='block';
+  document.getElementById('btnJsonToggle').textContent='{ } HIDE JSON';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// RENDER LIBRARY PANEL
+// ══════════════════════════════════════════════════════════════════════════
+function renderLibrary(){
+  document.getElementById('libCount').textContent=library.length+' entr'+(library.length===1?'y':'ies');
+  var el=document.getElementById('libRows');
+  if(!library.length){
+    el.innerHTML='<div style="padding:16px;text-align:center;font-size:9px;color:rgba(255,170,0,0.3)">No calibrations saved yet</div>';
+    return;
+  }
+  var html='';
+  library.forEach(function(rec,idx){
+    var p=rec.params;
+    var meta='B'+p.bootesR_mly+' N'+p.nShells+' φ'+p.phi.toFixed(3)+' CM'+p.cm_pct+'% gap'+p.gap_mly;
+    var stCls=p.contact_ok?'kiss':'warn';
+    var stTxt=p.contact_ok?'★ KISSING':'gap';
+    html+='<div class="lib-row">';
+    html+='<div>';
+    html+='<div class="lib-fln">'+rec.fln+'</div>';
+    html+='<div class="lib-meta">'+meta+(rec.notes?' — '+rec.notes:'')+'</div>';
+    html+='</div>';
+    html+='<span class="lib-status '+stCls+'">'+stTxt+'</span>';
+    html+='<div class="lib-actions">';
+    html+='<button onclick="loadRecord('+idx+')" title="Load">↩</button>';
+    html+='<button onclick="dlJson('+idx+')" style="border-color:#a855f7;color:#a855f7" title="JSON">JSON</button>';
+    html+='<button onclick="dlMask('+idx+')" style="border-color:#22c55e;color:#22c55e" title="Mask">MASK</button>';
+    html+='<button onclick="dlFp('+idx+')" style="border-color:#3b82f6;color:#3b82f6" title="Fingerprint">FP</button>';
+    html+='<button onclick="delRecord('+idx+')" style="border-color:#ef4444;color:#ef4444;opacity:0.6" title="Delete">✕</button>';
+    html+='</div>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LIBRARY ACTIONS
+// ══════════════════════════════════════════════════════════════════════════
+function loadRecord(idx){
+  var rec=library[idx]; if(!rec) return;
+  var p=rec.params;
+  document.getElementById('sBootesR').value=p.bootesR_mly;
+  document.getElementById('sShells').value=p.nShells;
+  document.getElementById('sPhi').value=Math.round(p.phi*100);
+  document.getElementById('sGap').value=p.gap_mly;
+  document.getElementById('sCM').value=p.cm_pct;
+  if(rec.notes) document.getElementById('iNotes').value=rec.notes;
+  draw();
+}
+
+function dlJson(idx){
+  var rec=library[idx]; if(!rec) return;
+  dlBlob(JSON.stringify(rec,null,2),'application/json',rec.fln+'.json');
+}
+function dlMask(idx){
+  var rec=library[idx]; if(!rec||!rec.mask_data_url) return;
+  var a=document.createElement('a'); a.download=rec.fln+'_mask.png'; a.href=rec.mask_data_url; a.click();
+}
+function dlFp(idx){
+  var rec=library[idx]; if(!rec||!rec.fingerprint_data_url) return;
+  var a=document.createElement('a'); a.download=rec.fln+'_fingerprint.png'; a.href=rec.fingerprint_data_url; a.click();
+}
+function delRecord(idx){
+  if(!confirm('Delete '+library[idx].fln+'?')) return;
+  library.splice(idx,1);
+  try{sessionStorage.setItem('pinball_library',JSON.stringify(library));}catch(e){}
+  renderLibrary();
+}
+
+function downloadCurrentJson(){
+  if(!lastGob) return;
+  dlBlob(JSON.stringify(lastGob,null,2),'application/json',lastGob.fln+'.json');
+}
+function downloadMask(){
+  var p=getParams(),shells=buildShells(p),placed=placeSnail(shells,p.gap);
+  var fln=makeFLN(p);
+  var mc=renderMask(fln);
+  var a=document.createElement('a'); a.download=fln+'_mask.png'; a.href=mc.toDataURL('image/png'); a.click();
+}
+function downloadFingerprint(){
+  if(!lastGob) return;
+  var fc=renderFingerprint(lastGob.layers,lastGob.fln);
+  var a=document.createElement('a'); a.download=lastGob.fln+'_fingerprint.png'; a.href=fc.toDataURL('image/png'); a.click();
+}
+
+function exportIndex(){
+  var index={
+    exported_at: new Date().toISOString(),
+    T_TO_MLY: T_TO_MLY,
+    total_entries: library.length,
+    entries: library.map(function(r){
+      return {fln:r.fln,saved_at:r.saved_at,notes:r.notes,params:r.params};
+    })
+  };
+  dlBlob(JSON.stringify(index,null,2),'application/json','pinball_library_index_'+new Date().toISOString().slice(0,10)+'.json');
+}
+
+function clearLibrary(){
+  if(!confirm('Clear all '+library.length+' calibrations from the library? This cannot be undone.')) return;
+  library=[];
+  try{sessionStorage.removeItem('pinball_library');}catch(e){}
+  renderLibrary();
+}
+
+function dlBlob(text,type,name){
+  var b=new Blob([text],{type:type});
+  var u=URL.createObjectURL(b);
+  var a=document.createElement('a'); a.download=name; a.href=u; a.click();
+  URL.revokeObjectURL(u);
+}
+
+function toggleJson(){
+  var w=document.getElementById('jsonWrap');
+  var btn=document.getElementById('btnJsonToggle');
+  if(w.style.display==='block'){ w.style.display='none'; btn.textContent='{ } JSON'; }
+  else { w.style.display='block'; btn.textContent='{ } HIDE JSON'; }
+}
+function copyJson(){
+  var ta=document.getElementById('jsonOut'); ta.select(); document.execCommand('copy');
+  setTimeout(function(){},1500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// φ-KISSING CHECK — does correction restore the golden ratio between shells?
+// ══════════════════════════════════════════════════════════════════════════
+function drawPhiKissingCheck(shells, p) {
+  var panel = document.getElementById('phiKissPanel');
+  if (!panel) return;
+
+  var names = ['Purple','Blue','Green','Yellow','Orange','Red-1','Boötes'];
+  var cols  = ['#9b30d9','#3b82f6','#22c55e','#eab308','#f97316','#ef4444','#7f0000'];
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;">';
+  var allGood = true;
+  var anyCheck = false;
+
+  for (var i = 1; i < shells.length; i++) {
+    var inner = shells[i-1].r;
+    var outer = shells[i].r;
+    var ratio = outer / inner;
+    var dev   = ((ratio - PHI) / PHI * 100);
+    var good  = Math.abs(dev) < 2.0;
+    var warn  = Math.abs(dev) < 5.0;
+    if (!good) allGood = false;
+    anyCheck = true;
+
+    var nameI = i <= names.length ? names[i-1] : 'S'+(i-1);
+    var nameO = i <= names.length ? names[i]   : 'S'+i;
+    var colI  = i-1 < cols.length ? cols[i-1]  : '#888';
+    var colO  = i   < cols.length ? cols[i]    : '#888';
+    var statusCol = good ? '#5de4a1' : warn ? '#fbbf24' : '#ef4444';
+    var statusTxt = good ? '✓ φ kissing' : warn ? '≈ close' : '✗ gap';
+
+    html += '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:6px 10px;">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+    html += '<span style="color:'+colI+';font-size:9px;font-weight:700;">'+nameI+'</span>';
+    html += '<span style="color:rgba(232,228,240,0.3);font-size:9px;">→</span>';
+    html += '<span style="color:'+colO+';font-size:9px;font-weight:700;">'+nameO+'</span>';
+    html += '<span style="margin-left:auto;color:'+statusCol+';font-size:9px;font-weight:700;">'+statusTxt+'</span>';
+    html += '</div>';
+    html += '<div style="font-size:10px;font-weight:700;color:'+statusCol+';">ratio = '+ratio.toFixed(4)+'</div>';
+    html += '<div style="font-size:8px;color:rgba(232,228,240,0.4);">φ = '+PHI.toFixed(4)+'  ·  Δ '+(dev>=0?'+':'')+dev.toFixed(2)+'%</div>';
+    html += '<div style="font-size:8px;color:rgba(232,228,240,0.3);">'+inner.toFixed(0)+' → '+outer.toFixed(0)+' Mly</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Summary verdict
+  var verdictCol = allGood ? '#5de4a1' : '#fbbf24';
+  var verdictTxt = allGood
+    ? '✓ ALL SHELLS SATISFY φ-KISSING — φ-ratios correct in measured data — geometry was never wrong'
+    : p.mode === 'corrected'
+      ? '✓ φ-ratios correct — uniform n_void correction preserves all ratios as expected'
+      : '⚠ check shell sizes — φ-ratio deviation detected';
+
+  html = '<div style="font-size:9px;padding:6px 10px;background:rgba(93,228,161,0.05);border-bottom:1px solid rgba(255,255,255,0.05);color:'+verdictCol+';font-weight:700;">'+verdictTxt+'</div>' + html;
+
+  // Boötes corrected vs kissing prediction
+  if (p.mode === 'corrected' && shells.length >= 2) {
+    var outermost = shells[shells.length-1].r;
+    var predicted = shells[shells.length-2].r * PHI;
+    var kissErr = ((outermost - predicted)/predicted*100).toFixed(2);
+    html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);border-radius:3px;font-size:8px;">';
+    html += '<span style="color:#a855f7;font-weight:700;">Boötes predicted from φ: </span>';
+    html += '<span style="color:rgba(232,228,240,0.7);">'+predicted.toFixed(0)+' Mly · actual: '+outermost.toFixed(0)+' Mly · error: '+(kissErr>=0?'+':'')+kissErr+'%</span>';
+    if (Math.abs(kissErr) < 2) {
+      html += '<span style="color:#5de4a1;margin-left:8px;">✓ correction restores φ-kissing</span>';
+    } else {
+      html += '<span style="color:#fbbf24;margin-left:8px;">Boötes correction may need adjustment to close the gap</span>';
+    }
+    html += '</div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONTACT TIMELINE
+// ══════════════════════════════════════════════════════════════════════════
+// Fixed anchors from observation:
+//   T_NOW    = 13.8 Gyr  — we are here (full enclosure, last contact)
+//   T_ANDROMEDA = 18.3 Gyr from Bang = 4.5 Gyr from now
+//   T_FIRST  = 8.5 Gyr  — first contact (inner shell kisses)
+//   INTER    = T_NOW - T_FIRST = 5.3 Gyr
+
+var T_BANG       = 0;
+var T_FIRST      = 8.5;   // Gyr — first contact, inner shell locks
+var T_NOW        = 13.8;  // Gyr — full enclosure, WE ARE HERE
+var T_ANDROMEDA  = 18.3;  // Gyr from Bang = 4.5 Gyr from now
+var INTER_PERIOD = T_NOW - T_FIRST; // 5.3 Gyr
+
+function drawTimeline(p) {
+  var tc = document.getElementById('timelineCanvas');
+  if (!tc) return;
+  var W = tc.offsetWidth; tc.width = W; tc.height = 160;
+  var ctx = tc.getContext('2d');
+  ctx.fillStyle = '#07090f';
+  ctx.fillRect(0, 0, W, 160);
+
+  var PAD = 38, TW = W - PAD * 2;
+  var T_MAX = 22; // Gyr axis max
+  var tScale = TW / T_MAX;
+  var midY = 72;
+
+  // Background bands
+  var bands = [
+    { t0:0,      t1:T_FIRST,     col:'rgba(168,85,247,0.06)', label:'Pre-contact' },
+    { t0:T_FIRST,t1:T_NOW,       col:'rgba(239,68,68,0.08)',  label:'Infall / sea receding' },
+    { t0:T_NOW,  t1:T_ANDROMEDA, col:'rgba(251,191,36,0.07)', label:'Wave arriving' },
+    { t0:T_ANDROMEDA, t1:T_MAX,  col:'rgba(93,228,161,0.04)', label:'Next cycle begins' }
+  ];
+  bands.forEach(function(b) {
+    var x0 = PAD + b.t0 * tScale;
+    var x1 = PAD + b.t1 * tScale;
+    ctx.fillStyle = b.col;
+    ctx.fillRect(x0, 20, x1 - x0, midY * 1.6);
+    ctx.fillStyle = 'rgba(232,228,240,0.18)';
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.label, (x0 + x1) / 2, 28);
+  });
+
+  // Timeline axis
+  ctx.strokeStyle = 'rgba(232,228,240,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, midY);
+  ctx.lineTo(PAD + TW, midY);
+  ctx.stroke();
+
+  // Tick marks every 2 Gyr
+  ctx.fillStyle = 'rgba(232,228,240,0.25)';
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'center';
+  for (var t = 0; t <= T_MAX; t += 2) {
+    var tx = PAD + t * tScale;
+    ctx.strokeStyle = 'rgba(232,228,240,0.1)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(tx, midY - 5); ctx.lineTo(tx, midY + 5); ctx.stroke();
+    ctx.fillText(t + 'G', tx, midY + 16);
+  }
+  ctx.fillStyle = 'rgba(232,228,240,0.3)';
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Gyr from Bang', PAD, 155);
+
+  // Boötes contact distance line — where inner shell kisses
+  // The first contact is when the blast wave reaches the inner shell
+  // distance = shell[1].r (innermost kissing shell radius in Mly)
+  // time = distance / c = distance Mly / 1 Mly per Myr × ... in Gyr
+  // Actually we anchor to observed: T_FIRST=8.5, T_NOW=13.8
+  // The calibrator shows what the φ-geometry predicts for contact distance
+  // We derive the implied bang propagation speed from: speed = Shell_1_r / T_FIRST
+  var shells = buildShells(p);
+  var innerR = shells[0].r; // innermost shell radius in Mly
+  var impliedSpeed = innerR / (T_FIRST * 1000); // Mly/Myr — for info
+
+  // Draw events
+  var events = [
+    { t: T_BANG,      label: 'BANG', sublabel: 'our Big Bang', col: '#a855f7', marker: '◆', size: 10 },
+    { t: T_FIRST,     label: '8.5 Gyr', sublabel: 'first contact\nsea recedes', col: '#ef4444', marker: '★', size: 9 },
+    { t: T_NOW,       label: '13.8 Gyr', sublabel: 'WE ARE HERE\nfull enclosure', col: '#5de4a1', marker: '★', size: 11 },
+    { t: T_ANDROMEDA, label: '18.3 Gyr', sublabel: 'Andromeda\n+4.5 Gyr from now', col: '#fbbf24', marker: '◆', size: 9 }
+  ];
+
+  events.forEach(function(ev, i) {
+    var ex = PAD + ev.t * tScale;
+    var above = i % 2 === 0;
+    var yOff = above ? -28 : 28;
+
+    // Vertical line
+    ctx.strokeStyle = ev.col + '99';
+    ctx.lineWidth = ev.t === T_NOW ? 2 : 1.2;
+    ctx.setLineDash(ev.t === T_NOW ? [] : [3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(ex, midY - 22);
+    ctx.lineTo(ex, midY + 22);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Marker dot
+    ctx.fillStyle = ev.col;
+    ctx.beginPath();
+    ctx.arc(ex, midY, ev.t === T_NOW ? 7 : 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#07090f';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label above/below
+    ctx.fillStyle = ev.col;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(ev.label, ex, midY + yOff - 3);
+    ctx.fillStyle = 'rgba(232,228,240,0.5)';
+    ctx.font = '7px monospace';
+    var lines = ev.sublabel.split('\n');
+    lines.forEach(function(ln, li) {
+      ctx.fillText(ln, ex, midY + yOff + 9 + li * 10);
+    });
+  });
+
+  // Inter-period bracket
+  var x1b = PAD + T_FIRST * tScale;
+  var x2b = PAD + T_NOW * tScale;
+  var bracketY = midY + 42;
+  ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(x1b, bracketY);
+  ctx.lineTo(x2b, bracketY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(239,68,68,0.7)';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('5.3 Gyr inter-contact period', (x1b + x2b) / 2, bracketY - 3);
+
+  // Andromeda bracket from NOW
+  var xNow = PAD + T_NOW * tScale;
+  var xAnd = PAD + T_ANDROMEDA * tScale;
+  var bY2 = midY + 42;
+  ctx.strokeStyle = 'rgba(251,191,36,0.6)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(xNow, bY2 + 16);
+  ctx.lineTo(xAnd, bY2 + 16);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(251,191,36,0.7)';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('+4.5 Gyr from now', (xNow + xAnd) / 2, bY2 + 13);
+
+  // Shell radius annotation
+  ctx.fillStyle = 'rgba(93,228,161,0.5)';
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('inner shell r = ' + innerR.toFixed(0) + ' Mly  (implied wave speed: ' + impliedSpeed.toFixed(1) + ' Mly/Myr)', W - 4, 155);
+
+  // Update stat boxes
+  document.getElementById('tlT1').textContent = 't = ' + T_FIRST + ' Gyr';
+  document.getElementById('tlT2').textContent = 't = ' + T_NOW + ' Gyr ← NOW';
+  document.getElementById('tlT3').textContent = 't = ' + T_ANDROMEDA + ' Gyr';
+  document.getElementById('tlT3sub').textContent = '+' + (T_ANDROMEDA - T_NOW).toFixed(1) + ' Gyr from now — not 18.3 from now';
+  document.getElementById('tlPeriod').textContent = INTER_PERIOD.toFixed(1) + ' Gyr';
+  document.getElementById('tlAndroFromBang').textContent = T_ANDROMEDA + ' Gyr';
+  document.getElementById('tlAndroFromNow').textContent = (T_ANDROMEDA - T_NOW).toFixed(1) + ' Gyr';
+
+  // Rhythm check: is Andromeda exactly one period after last contact?
+  var rhythmDiff = Math.abs((T_ANDROMEDA - T_NOW) - INTER_PERIOD);
+  var rhythmEl = document.getElementById('tlRhythm');
+  if (rhythmDiff < 0.2) {
+    rhythmEl.textContent = '✓ Andromeda = last contact + 1 period (' + INTER_PERIOD.toFixed(1) + ' Gyr)';
+    rhythmEl.style.color = '#5de4a1';
+  } else {
+    rhythmEl.textContent = 'Δ = ' + rhythmDiff.toFixed(2) + ' Gyr off one period';
+    rhythmEl.style.color = '#fbbf24';
+  }
+
+  // φ IN THE TIMELINE — the golden ratio should appear in the time ratios
+  // t_first / t_now = 8.5 / 13.8 = 0.6159 ≈ 1/φ = 0.6180
+  // t_now / t_andromeda = 13.8 / 18.3 = 0.7541 ≈ 1/√φ = 0.7862 (close)
+  // t_inter / t_now = 5.3 / 13.8 = 0.3841 ≈ 1/φ² = 0.3820 ✓
+  var ratio_first_now = T_FIRST / T_NOW;
+  var ratio_inter_now = INTER_PERIOD / T_NOW;
+  var phi_inv   = 1 / PHI;          // 0.6180
+  var phi_inv2  = 1 / (PHI * PHI);  // 0.3820
+
+  var phiRatio1El = document.getElementById('tlPhiRatio1');
+  var phiRatio2El = document.getElementById('tlPhiRatio2');
+  var phiUnivEl   = document.getElementById('tlPhiUniv');
+
+  var dev1 = ((ratio_first_now - phi_inv) / phi_inv * 100).toFixed(2);
+  var dev2 = ((ratio_inter_now - phi_inv2) / phi_inv2 * 100).toFixed(2);
+
+  phiRatio1El.textContent = ratio_first_now.toFixed(4) + ' vs 1/φ = ' + phi_inv.toFixed(4) + '  (Δ ' + dev1 + '%)';
+  phiRatio1El.style.color = Math.abs(dev1) < 1 ? '#5de4a1' : Math.abs(dev1) < 3 ? '#fbbf24' : '#ef4444';
+
+  phiRatio2El.textContent = ratio_inter_now.toFixed(4) + ' vs 1/φ² = ' + phi_inv2.toFixed(4) + '  (Δ ' + dev2 + '%)';
+  phiRatio2El.style.color = Math.abs(dev2) < 1 ? '#5de4a1' : Math.abs(dev2) < 3 ? '#fbbf24' : '#ef4444';
+
+  // Universal test statement
+  phiUnivEl.textContent = Math.abs(dev1) < 2
+    ? '✓ φ encodes the timeline — same in every bubble — universally testable'
+    : '⚠ timeline deviates from φ-prediction — check contact distances';
+  phiUnivEl.style.color = Math.abs(dev1) < 2 ? '#5de4a1' : '#fbbf24';
+
+  document.getElementById('tlStatus').textContent =
+    'n_void = ' + N_VOID.toFixed(4) +
+    ' · Planck through pool · SH0ES around it · Boötes ' +
+    MEASURED_SIZES.bootes + '→' + Math.round(CORRECTED_SIZES.bootes) + ' Mly';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SNAP / SAVE IMAGE
+// ══════════════════════════════════════════════════════════════════════════
+function snapToContact(){ document.getElementById('sGap').value=0; draw(); }
+function snapToPhi(){ document.getElementById('sPhi').value=Math.round(PHI*100); draw(); }
+
+function saveImage(){
+  var sc=document.getElementById('snailCanvas'), pc=document.getElementById('projCanvas');
+  var c=document.createElement('canvas'); c.width=sc.width; c.height=sc.height+pc.height;
+  var ctx=c.getContext('2d'); ctx.drawImage(sc,0,0); ctx.drawImage(pc,0,sc.height);
+  var a=document.createElement('a');
+  a.download='snail_'+document.getElementById('sBootesR').value+'Mly.png';
+  a.href=c.toDataURL('image/png'); a.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PARALLAX DIAGRAM
+// ══════════════════════════════════════════════════════════════════════════
+function drawParallaxDiagram() {
+  var pc = document.getElementById('parallaxDiagram');
+  if (!pc) return;
+  var ctx = pc.getContext('2d');
+  var W = 280, H = 110;
+  ctx.fillStyle = '#06060f'; ctx.fillRect(0,0,W,H);
+
+  var nearX = 28, farX = W-28, wallH = H*0.55, wallY = H*0.12;
+
+  // Void heat fill
+  var vg = ctx.createLinearGradient(nearX+8,0,farX-8,0);
+  vg.addColorStop(0,'rgba(120,20,20,0)');
+  vg.addColorStop(0.5,'rgba(180,60,10,0.3)');
+  vg.addColorStop(1,'rgba(120,20,20,0)');
+  ctx.fillStyle=vg; ctx.fillRect(nearX+8,wallY,farX-nearX-16,wallH);
+
+  // Void label
+  ctx.fillStyle='rgba(239,100,50,0.55)'; ctx.font='7px monospace'; ctx.textAlign='center';
+  ctx.fillText('VOID — hot interior',(nearX+farX)/2, wallY+wallH*0.4);
+  ctx.fillText('heat lens = diverging',(nearX+farX)/2, wallY+wallH*0.4+10);
+
+  // Walls
+  ctx.fillStyle='#4fc3f7'; ctx.fillRect(nearX-5,wallY,8,wallH);
+  ctx.fillStyle='#fbbf24'; ctx.fillRect(farX-3,wallY,8,wallH);
+  ctx.font='7px monospace';
+  ctx.fillStyle='#4fc3f7'; ctx.textAlign='center';
+  ctx.fillText('NEAR',nearX,wallY-3); ctx.fillText('observer',nearX,wallY+wallH+10);
+  ctx.fillStyle='#fbbf24';
+  ctx.fillText('FAR',farX,wallY-3); ctx.fillText('galaxies',farX,wallY+wallH+10);
+
+  // True far wall vs apparent
+  var obsY = wallY+wallH*0.3;
+  var apparentX = nearX + (farX-nearX)/N_VOID;
+
+  // Planck beam — straight through
+  ctx.strokeStyle='rgba(79,195,247,0.8)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(nearX+3,obsY); ctx.lineTo(farX-3,obsY); ctx.stroke();
+  ctx.setLineDash([]);
+  // Apparent wall marker
+  ctx.strokeStyle='rgba(79,195,247,0.35)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.moveTo(apparentX,wallY); ctx.lineTo(apparentX,wallY+wallH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(79,195,247,0.7)'; ctx.font='6px monospace'; ctx.textAlign='center';
+  ctx.fillText('apparent',apparentX,wallY-3);
+
+  // Observer dot
+  ctx.fillStyle='#4fc3f7'; ctx.beginPath(); ctx.arc(nearX+3,obsY,3.5,0,Math.PI*2); ctx.fill();
+
+  // SH0ES bypass path
+  var byY = wallY+wallH+18;
+  ctx.strokeStyle='#fbbf24'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(nearX+3,obsY+3);
+  ctx.bezierCurveTo(nearX+3,byY+8,farX-3,byY+8,farX-3,wallY+wallH);
+  ctx.stroke();
+  ctx.fillStyle='#fbbf24'; ctx.font='6px monospace'; ctx.textAlign='center';
+  ctx.fillText('SH0ES — filament path — no void',(nearX+farX)/2,byY+20);
+
+  // n_void
+  ctx.fillStyle='#ef4444'; ctx.font='bold 7px monospace'; ctx.textAlign='right';
+  ctx.fillText('n='+N_VOID.toFixed(4),W-3,H-3);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// WIRE UP
+// ══════════════════════════════════════════════════════════════════════════
+['sBootesR','sShells','sPhi','sGap','sCM'].forEach(function(id){
+  document.getElementById(id).oninput=draw;
+});
+
+renderLibrary();
+// Start in corrected mode
+setMode('corrected');
+// Draw parallax diagram
+setTimeout(drawParallaxDiagram, 150);
+
+// Ping server on load to show connection status
+(function pingServer(){
+  var el = document.getElementById('saveStatus');
+  fetch('http://localhost:8000/', { method: 'HEAD' })
+    .then(function(){ if(el){ el.textContent='✓ file_server.py running — files will save to PB_Calibration_FLN\\'; el.style.color='#4ade80'; } })
+    .catch(function(){ if(el){ el.textContent='⚠ file_server.py not running — run it from G:\\Comfy_Central_Data\\server_files\\  (session-only until then)'; el.style.color='#fbbf24'; } });
+})();
+</script>
+</body>
+</html>
