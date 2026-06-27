@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>No Singularity — The 85% Bang Mechanism</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#04040c;color:#e8e4f0;font-family:'Crimson Pro',serif;overflow:hidden;}
+canvas{display:block;position:fixed;top:0;left:0;}
+
+/* BIG STATEMENT */
+#statement{
+  position:fixed;top:0;left:0;right:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:80px;z-index:20;
+  background:linear-gradient(180deg,rgba(4,4,12,0.97) 70%,transparent);
+  pointer-events:none;
+}
+#statement h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(28px,4vw,56px);
+  letter-spacing:6px;
+  color:#ef4444;
+  text-shadow:0 0 40px rgba(239,68,68,0.6),0 0 80px rgba(239,68,68,0.3);
+  line-height:1;
+  animation: titleSlam 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes titleSlam {
+  0%   { transform:scale(3) translateY(-30px); opacity:0; letter-spacing:30px; }
+  60%  { transform:scale(0.95); opacity:1; }
+  100% { transform:scale(1) translateY(0); letter-spacing:6px; }
+}
+#statement p{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;letter-spacing:3px;color:#4fc3f7;margin-top:4px;
+  text-transform:uppercase;
+  animation: fadeUp 0.6s 0.35s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* INFO PANEL */
+#info{
+  position:fixed;top:90px;left:20px;z-index:20;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  background:rgba(4,4,12,0.92);border:1px solid rgba(239,68,68,0.2);
+  border-radius:4px;padding:14px 16px;width:280px;line-height:1.8;
+}
+#info .label{color:#888;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+#info .stage{font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:8px;}
+#info .bar-row{display:flex;align-items:center;gap:8px;margin:3px 0;}
+#info .bar-label{color:#888;font-size:9px;width:55px;flex-shrink:0;}
+#info .bar{flex:1;height:6px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;position:relative;}
+#info .bar-fill{height:100%;border-radius:2px;transition:width 0.04s linear;}
+#info .bar-marker{position:absolute;top:-1px;bottom:-1px;width:1px;background:rgba(239,68,68,0.7);pointer-events:none;}
+#info .bar-val{font-size:9px;width:36px;text-align:right;flex-shrink:0;}
+#info .divider{height:1px;background:rgba(255,255,255,0.06);margin:8px 0;}
+#info .body-text{font-size:9px;color:#777;line-height:1.7;}
+#info .highlight{color:#22c55e;}
+#info .warn{color:#ef4444;}
+#info .blue{color:#4fc3f7;}
+
+/* SPIN METER */
+#spinmeter{
+  position:fixed;top:90px;right:20px;z-index:20;
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  background:rgba(4,4,12,0.92);border:1px solid rgba(168,85,247,0.2);
+  border-radius:4px;padding:14px 16px;width:200px;
+}
+#spinmeter .label{color:#888;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+#spinCanvas{display:block;margin:0 auto;}
+#spinVal{text-align:center;margin-top:8px;font-size:10px;color:#a855f7;}
+#spinNote{text-align:center;margin-top:4px;font-size:8px;color:#555;line-height:1.5;}
+
+/* EINSTEIN QUOTE */
+#einstein{
+  position:fixed;bottom:80px;right:20px;z-index:20;
+  font-family:'Crimson Pro',serif;font-style:italic;
+  font-size:13px;color:rgba(232,228,240,0.35);
+  max-width:260px;text-align:right;line-height:1.6;
+}
+#einstein cite{display:block;font-style:normal;font-size:9px;
+  font-family:'JetBrains Mono',monospace;letter-spacing:2px;
+  color:rgba(232,228,240,0.2);margin-top:4px;}
+
+/* CONTROLS */
+#controls{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;align-items:center;z-index:20;
+  background:rgba(4,4,12,0.95);border:1px solid rgba(239,68,68,0.25);
+  border-radius:6px;padding:10px 20px;
+}
+#controls label{font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:#666;letter-spacing:2px;text-transform:uppercase;}
+#controls input[type=range]{width:260px;accent-color:#ef4444;cursor:pointer;}
+#controls .val{font-family:'JetBrains Mono',monospace;font-size:12px;
+  color:#22c55e;min-width:48px;}
+#controls button{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  border:1px solid currentColor;border-radius:3px;
+  padding:5px 12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;
+  background:transparent;transition:all 0.15s;
+}
+#btnAuto{color:#4fc3f7;border-color:rgba(79,195,247,0.4);}
+#btnAuto:hover,#btnAuto.active{background:rgba(79,195,247,0.15);}
+#btnReset{color:#888;border-color:rgba(255,255,255,0.15);}
+#btnReset:hover{background:rgba(255,255,255,0.05);}
+#btnBang{color:#ef4444;border-color:rgba(239,68,68,0.5);}
+#btnBang:hover{background:rgba(239,68,68,0.15);}
+
+/* PACKING SCALE */
+#scale{
+  position:fixed;bottom:80px;left:20px;z-index:20;
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  letter-spacing:1px;
+}
+.scale-row{display:flex;align-items:center;gap:6px;margin:3px 0;}
+.scale-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="spinCanvas" width="160" height="160" style="display:none"></canvas>
+
+<div id="statement">
+  <h1>THERE IS NO SINGULARITY</h1>
+  <p>It is just 85% sphere packing &nbsp;·&nbsp; The atom is squashed, not split &nbsp;·&nbsp; <span style="color:#fbbf24">SLOW MOTION — real event lasts a fraction of a second</span></p>
+</div>
+
+<div id="info">
+  <div class="label">Bang Mechanism</div>
+  <div class="stage" id="stageTxt">STAGE 1 — Stable Lattice</div>
+  <div class="bar-row">
+    <span class="bar-label">Packing</span>
+    <div class="bar">
+      <div class="bar-fill" id="barPack" style="width:0%;background:#22c55e;"></div>
+      <div class="bar-marker" style="left:85%" title="BANG at 85%"></div>
+    </div>
+    <span class="bar-val highlight" id="valPack">74.05%</span>
+  </div>
+  <div style="font-size:8px;color:rgba(239,68,68,0.5);text-align:right;margin-top:-2px;margin-bottom:3px;letter-spacing:1px;">⚡ BANG AT 85% ——————————————↑</div>
+  <div class="bar-row">
+    <span class="bar-label">Gap space</span>
+    <div class="bar"><div class="bar-fill" id="barGap" style="width:100%;background:#4fc3f7;"></div></div>
+    <span class="bar-val blue" id="valGap">25.9%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Squareness</span>
+    <div class="bar"><div class="bar-fill" id="barSq" style="width:0%;background:#f97316;"></div></div>
+    <span class="bar-val" id="valSq" style="color:#f97316">0%</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">Spin period</span>
+    <div class="bar"><div class="bar-fill" id="barSpin" style="width:100%;background:#a855f7;"></div></div>
+    <span class="bar-val" id="valSpin" style="color:#a855f7">1.00</span>
+  </div>
+  <div class="divider"></div>
+  <div class="body-text" id="bodyTxt">
+    Nucleons packed at <span class="highlight">74.05%</span> — Kepler's FCC/HCP maximum.<br>
+    26% gap space holds electrons in stable orbitals.<br>
+    Spin period is long. The lattice breathes.<br><br>
+    <span style="color:#555">Only 10.95% more compression is needed.<br>
+    The dam holds for billions of years.</span>
+  </div>
+</div>
+
+<div id="spinmeter">
+  <div class="label">Rotation Period</div>
+  <canvas id="spinC" width="168" height="120"></canvas>
+  <div id="spinVal">T = 1.000 → ∞</div>
+  <div id="spinNote">As packing → 85%<br>period T → 0<br>This is the 1/0 trigger</div>
+</div>
+
+<div id="einstein">
+  "God does not play dice with the universe."<br>
+  "A black hole has no singularity."
+  <cite>— Albert Einstein, 1939</cite>
+</div>
+
+<div id="scale">
+  <div class="scale-row"><div class="scale-dot" style="background:#22c55e"></div><span style="color:#22c55e">74.05% — Kepler stable (FCC/HCP)</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#eab308"></div><span style="color:#eab308">80% — Deformation begins</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#f97316"></div><span style="color:#f97316">83% — Corners forming, spin accelerating</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#ef4444"></div><span style="color:#ef4444">85% — Geometric failure → BANG</span></div>
+  <div class="scale-row"><div class="scale-dot" style="background:#4fc3f7"></div><span style="color:#4fc3f7">e⁻ polar jets (electrons ejected via poles)</span></div>
+</div>
+
+<div id="controls">
+  <label>Compression</label>
+  <input type="range" id="pressure" min="0" max="100" value="0">
+  <span class="val" id="pVal">74.1%</span>
+  <button id="btnAuto">▶ Continue</button>
+  <button id="btnReset">⏸ Pause</button>
+  <button id="btnBang">⚡ Bang</button>
+  <button id="btnRestart" style="color:#888;border-color:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.15);border-radius:3px;padding:5px 12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;background:transparent;font-family:'JetBrains Mono',monospace;font-size:9px;">↺ Restart</button>
+</div>
+
+<script>
+// ===== PHYSICS CONSTANTS =====
+var PACK_STABLE   = Math.PI / Math.sqrt(18); // 0.7405 Kepler FCC/HCP
+var PACK_CRITICAL = 0.850;                   // 85% random close pack → bang
+var PACK_DELTA    = PACK_CRITICAL - PACK_STABLE; // 0.1095
+
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var spinC = document.getElementById('spinC');
+var spinCtx = spinC.getContext('2d');
+var W, H, cx, cy;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W/2; cy = H/2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ===== SPHERE LATTICE =====
+var spheres = [];
+var ROWS = 9, COLS = 9;
+var baseR = Math.min(W, H) * 0.028;
+
+// Final lattice positions
+var latticeTargets = [];
+function buildLatticeTargets() {
+  latticeTargets = [];
+  var spacing = baseR * 2.05;
+  var offX = -(COLS-1)*spacing/2;
+  var offY = -(ROWS-1)*spacing*0.866/2;
+  for (var row = 0; row < ROWS; row++) {
+    for (var col = 0; col < COLS; col++) {
+      var x = offX + col*spacing + (row%2)*spacing*0.5;
+      var y = offY + row*spacing*0.866;
+      if (Math.sqrt(x*x+y*y) > spacing*4.0) continue;
+      latticeTargets.push({ tx: x, ty: y });
+    }
+  }
+}
+buildLatticeTargets();
+
+function initSpheres() {
+  spheres = [];
+  // Nucleons start scattered outside the lattice radius, fly in and jiggle into place
+  var latticeR = baseR * 5.5;
+  // Shuffle lattice targets so nucleons arrive in random positions each replay
+  for (var si=latticeTargets.length-1;si>0;si--) {
+    var sj=Math.floor(Math.random()*(si+1));
+    var tmp=latticeTargets[si]; latticeTargets[si]=latticeTargets[sj]; latticeTargets[sj]=tmp;
+  }
+  for (var i = 0; i < latticeTargets.length; i++) {
+    var lt = latticeTargets[i];
+    var ang = Math.random() * Math.PI * 2;
+    var startR = latticeR * (1.4 + Math.random() * 0.8);
+    var preSettled = firstRun;
+    // Timing: pulse 1 at 0.15s, pulse 2 at 0.30s, then rest flood in 0.3-1.2s
+    var st = i === 0 ? 0.15 : i === 1 ? 0.30 : 0.30 + Math.random() * 0.9;
+    spheres.push({
+      ox: lt.tx, oy: lt.ty,
+      x:  preSettled ? lt.tx : Math.cos(ang)*startR,
+      y:  preSettled ? lt.ty : Math.sin(ang)*startR,
+      vx: 0, vy: 0,
+      settled: preSettled,
+      settleT: st,
+      cracked: false, crackTime: 0,
+      hue: 200 + Math.random()*40,
+      proton: Math.random() > 0.5,
+      spinPhase: Math.random()*Math.PI*2,
+      settleFlash: 0
+    });
+  }
+}
+initSpheres();
+// First run: skip assembly, go straight to compression
+if (firstRun) { assemblyDone = true; autoPlay = true; }
+
+// Update Brownian settling — called each frame during assembly phase
+var assemblyDone = false;
+function updateAssembly(dt) {
+  var now = performance.now()/1000;
+  var allSettled = true;
+  for (var i = 0; i < spheres.length; i++) {
+    var s = spheres[i];
+    if (s.settled) continue;
+    allSettled = false;
+    // Wait for stagger delay
+    if (now < s.settleT) continue;
+    // Spring toward target with Brownian jitter
+    var dx = s.ox - s.x, dy = s.oy - s.y;
+    var dist = Math.sqrt(dx*dx+dy*dy);
+    // Brownian noise — jitter decreases as it gets closer
+    var jitter = Math.min(dist*0.4, baseR*1.5);
+    s.vx += (dx * 6 + (Math.random()-0.5)*jitter*18) * dt;
+    s.vy += (dy * 6 + (Math.random()-0.5)*jitter*18) * dt;
+    // Damping — slows as it settles
+    var damp = dist > baseR*0.5 ? 0.82 : 0.68;
+    s.vx *= damp; s.vy *= damp;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    // Lock in when close enough
+    if (dist < 0.8 && Math.sqrt(s.vx*s.vx+s.vy*s.vy) < 0.5) {
+      s.x = s.ox; s.y = s.oy;
+      s.vx = 0; s.vy = 0;
+      s.settled = true;
+      s.settleFlash = 1.0; // brief glow on arrival
+    }
+  }
+  assemblyDone = allSettled;
+}
+
+// ===== STATE =====
+var pressure = 0;       // start from 0% — full 3-act journey
+var bangTriggered = false;
+var autoLoop = false;       // persistent auto mode — loops forever
+var replayTimer = -1;       // countdown to replay after bang (seconds)
+var assemblyPhase = false;  // FALSE on first load — hook fires immediately
+var firstRun = true;        // first run skips assembly, goes straight to bang
+var paused = false;         // pause state — slider usable, animation frozen
+var centralPulseCount = 0;  // count of central pulses fired before nucleon arrival
+var centralPulseT = 0;      // time of last central pulse
+var triggerParticles = []; // incoming trigger particles
+var lastTriggerSpawn = 0;  // time of last spawn
+var triggerHit = false;    // has a trigger hit the lattice this zone
+var autoPlay = false;
+var bangPhase = 0;      // 0=packing 1=cracking 2=explosion
+var bangT = 0;
+var particles = [];
+var lastFrame = 0;
+
+// ===== PACKING % from slider =====
+function packPct(p) { return p; } // slider IS the packing % — 0-100%. Bang at 85%.
+function spinPeriod(p) {
+  // Below 74%: fully stable, T=1
+  // 74-85%: period shortens as compression rises
+  // Above 85%: period collapses exponentially — the dam is breaking
+  if (p <= 74.05) return 1.0;
+  if (p <= 85.0) {
+    var frac = (p - 74.05) / 10.95; // 0 at 74%, 1 at 85%
+    return Math.max(0.001, 1.0 - Math.pow(frac, 1.6));
+  }
+  // Above 85%: exponential collapse — each % is dramatically more unstable
+  var overshoot = (p - 85.0) / 15.0; // 0 at 85%, 1 at 100%
+  return Math.max(0.0001, 0.001 * Math.pow(1 - overshoot, 2));
+}
+
+// ===== UI UPDATE =====
+function updateInfo(p) {
+  var pk = packPct(p);
+  var gp = 100 - pk;
+  var sq = Math.max(0, (p - 40) / 60);
+  var sp = spinPeriod(p);
+
+  // Bars
+  // Show full 0-100% scale — the bar fills proportionally to total packing
+  var packFrac = (pk - 74) / 11; // 0 at 74%, 1 at 85% — for colour only
+  var packCol = packFrac < 0.4 ? '#22c55e' : packFrac < 0.7 ? '#eab308' : '#ef4444';
+  document.getElementById('barPack').style.width = pk + '%'; // full 0-100% — bang fires at 85%, bar still has 15% to go
+  document.getElementById('barPack').style.background = packCol;
+  document.getElementById('valPack').textContent = pk.toFixed(2) + '%';
+  document.getElementById('valPack').style.color = packCol;
+
+  document.getElementById('barGap').style.width = gp + '%'; // gap shrinks — still 15% left when it blows
+  document.getElementById('valGap').textContent = gp.toFixed(2) + '%';
+
+  document.getElementById('barSq').style.width = (sq*100) + '%';
+  document.getElementById('valSq').textContent = (sq*100).toFixed(0) + '%';
+
+  var spinFrac = 1 - sp;
+  var spinCol = spinFrac < 0.5 ? '#a855f7' : spinFrac < 0.8 ? '#f97316' : '#ef4444';
+  document.getElementById('barSpin').style.width = ((1-spinFrac)*100) + '%';
+  document.getElementById('barSpin').style.background = spinCol;
+  document.getElementById('valSpin').textContent = sp.toFixed(3);
+  document.getElementById('valSpin').style.color = spinCol;
+
+  document.getElementById('pVal').textContent = pk.toFixed(1) + '%'; // actual packing %
+
+  // Stage text
+  var stageEl = document.getElementById('stageTxt');
+  var bodyEl = document.getElementById('bodyTxt');
+  if (bangPhase === 0) {
+    var pk = p; // p IS the packing % now (0-100)
+    if (pk < 74.05) {
+      stageEl.textContent = 'BELOW STABLE PACKING';
+      stageEl.style.color = '#555';
+      bodyEl.innerHTML = 'Below Kepler packing. Nucleons have room.<br><span style="color:#555">74.05% is where it locks in.</span>';
+    } else if (pk < 80) {
+      stageEl.textContent = 'STAGE 1 — Stable Lattice (74.05%)';
+      stageEl.style.color = '#22c55e';
+      bodyEl.innerHTML = 'Nucleons at <span style="color:#22c55e">74.05%</span> — Kepler FCC/HCP maximum stable packing.<br>26% gap holds electrons in orbitals.<br>Spin period long. Lattice breathes.<br><br><span style="color:#555">The dam holds for billions of years.<br>Only 10.95% more compression needed.</span>';
+    } else if (pk < 83) {
+      stageEl.textContent = 'STAGE 2 — Compression Rising';
+      stageEl.style.color = '#eab308';
+      bodyEl.innerHTML = 'Infall squeezing the lattice.<br>Gaps shrinking. Spheres pressing together.<br>Spin period shortening.<br><br><span style="color:#555">Electrons still in orbitals. Just.</span>';
+    } else if (pk < 85) {
+      stageEl.textContent = 'STAGE 3 — Corners Forming';
+      stageEl.style.color = '#f97316';
+      bodyEl.innerHTML = '<span style="color:#f97316">Spheres deforming to cubes.</span><br>Stress at corners. Spin collapsing toward zero.<br><br><span style="color:#ef4444">e⁻ ejected via poles — jets forming.</span>';
+    } else if (pk < 90) {
+      stageEl.textContent = '⚡ 85.00% — GEOMETRIC FAILURE';
+      stageEl.style.color = '#ef4444';
+      bodyEl.innerHTML = '<span style="color:#ef4444">DAM BREAKS.</span><br>Every nucleon fails simultaneously.<br><br><span style="color:#fbbf24">Not a singularity. Not infinite density.<br>Just 85% packing. The atom is squashed, not split.</span>';
+    } else {
+      stageEl.textContent = '☠ ' + pk.toFixed(1) + '% — CRITICAL OVERPRESSURE';
+      stageEl.style.color = '#ef4444';
+      var extraPct = (pk - 85).toFixed(1);
+      var trigger = pk < 88 ? 'a stray photon' : pk < 92 ? 'a single electron' : pk < 96 ? 'a quantum fluctuation' : 'literally anything';
+      bodyEl.innerHTML = '<span style="color:#ef4444">PAST THE POINT OF NO RETURN.</span><br>Every 1% above 85% is <em>exponentially</em> more unstable.<br>The energy barrier to collapse is now effectively zero.<br><br><span style="color:#fbbf24">' + extraPct + '% into the red zone.<br>Trigger energy needed: <span style="color:#fff">' + trigger + '</span>.<br>The cascade is already starting.</span>';
+    }
+    } else if (bangPhase === 1) {
+    stageEl.textContent = '⚡ CHAIN REACTION';
+    stageEl.style.color = '#ef4444';
+    bodyEl.innerHTML = 'Every nucleon at the same pressure.<br>They all fail together.<br>Not fission — <span style="color:#fbbf24">geometric failure from inside.</span><br><br>Energy cascades through the entire lattice<br>in a single coherent event.';
+  } else {
+    stageEl.textContent = 'BANG — ENERGY RELEASED';
+    stageEl.style.color = '#a855f7';
+    bodyEl.innerHTML = '<span style="color:#a855f7">74% → 85% — just 10.95% more compression.</span><br>The binding energy of the lattice transition × c².<br>This is E=mc². This is the mechanism.<br><br><span style="color:#22c55e">Einstein was right.<br>God does not play dice.<br>There is no singularity.</span>';
+  }
+}
+
+// ===== SPIN GAUGE =====
+function drawSpinGauge(p) {
+  var pk=packPct(p); var T = spinPeriod(pk);
+  var sc = spinCtx;
+  var W2 = 168, H2 = 120;
+  sc.clearRect(0,0,W2,H2);
+  var cx2 = W2/2, cy2 = H2*0.55;
+  var rad = 48;
+
+  // Arc background
+  sc.beginPath();
+  sc.arc(cx2, cy2, rad, Math.PI, 2*Math.PI);
+  sc.strokeStyle = 'rgba(255,255,255,0.06)';
+  sc.lineWidth = 6;
+  sc.stroke();
+
+  // Arc fill — how much period has collapsed
+  var frac = 1 - T; // 0=fast(full), 1=stopped
+  var arcEnd = Math.PI + frac * Math.PI;
+  var col = frac < 0.5 ? '#a855f7' : frac < 0.8 ? '#f97316' : '#ef4444';
+  sc.beginPath();
+  sc.arc(cx2, cy2, rad, Math.PI, arcEnd);
+  sc.strokeStyle = col;
+  sc.lineWidth = 6;
+  sc.lineCap = 'round';
+  sc.stroke();
+
+  // Needle
+  var needleAng = Math.PI + frac * Math.PI;
+  sc.beginPath();
+  sc.moveTo(cx2, cy2);
+  sc.lineTo(cx2 + Math.cos(needleAng)*rad*0.85, cy2 + Math.sin(needleAng)*rad*0.85);
+  sc.strokeStyle = col;
+  sc.lineWidth = 2;
+  sc.lineCap = 'round';
+  sc.stroke();
+
+  // Labels
+  sc.font = "8px 'JetBrains Mono',monospace";
+  sc.fillStyle = '#22c55e';
+  sc.textAlign = 'left';
+  sc.fillText('T=1', cx2-rad-2, cy2+12);
+  sc.fillStyle = '#ef4444';
+  sc.textAlign = 'right';
+  sc.fillText('T=0', cx2+rad+2, cy2+12);
+  sc.fillStyle = '#555';
+  sc.textAlign = 'center';
+  sc.fillText('1/0 TRIGGER', cx2, cy2+24);
+
+  // Value
+  document.getElementById('spinVal').textContent = 'T = ' + T.toFixed(4);
+  document.getElementById('spinVal').style.color = col;
+  if (T < 0.05) {
+    document.getElementById('spinNote').innerHTML = '<span style="color:#ef4444">ROTATION PERIOD → ZERO<br>THIS IS THE 1/0 SINGULARITY<br>IT IS JUST 85% PACKING</span>';
+  } else if (T < 0.3) {
+    document.getElementById('spinNote').innerHTML = '<span style="color:#f97316">Period collapsing fast<br>Lattice lock imminent</span>';
+  } else {
+    document.getElementById('spinNote').innerHTML = 'As packing → 85%<br>period T → 0<br>This is the 1/0 trigger';
+  }
+}
+
+// ===== RUBIK LATTICE BONDS =====
+// Draw connecting lines between nearest-neighbour nucleons
+// Isometric 3D tilt gives illusion of cubic lattice structure
+// Called BEFORE spheres so bonds appear behind them
+
+function drawLatticeBonds(compress, sq, globalAlpha) {
+  if (!spheres || spheres.length < 2) return;
+  var maxBondDist = baseR * 2.35; // nearest-neighbour distance in HCP
+  var now3 = performance.now() / 1000;
+
+  // 3D isometric tilt — rotate the bond endpoints slightly in Z
+  // to give the lattice a Rubik's cube / 3D crystal feel
+  // tilt angle increases as squareness rises (lattice becoming cubic)
+  var tiltZ = 0.18 + sq * 0.22; // radians — more cubic as pressure rises
+  var rotSpeed = 0.04;           // slow rotation around vertical axis
+  var rotY = now3 * rotSpeed;    // continuous slow spin
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0.08, (0.22 + sq * 0.4) * globalAlpha);
+
+  for (var i = 0; i < spheres.length; i++) {
+    var si = spheres[i];
+    if (!si.settled && assemblyPhase) continue;
+    var six = si.ox * compress, siy = si.oy * compress;
+
+    for (var j = i + 1; j < spheres.length; j++) {
+      var sj = spheres[j];
+      if (!sj.settled && assemblyPhase) continue;
+      var sjx = sj.ox * compress, sjy = sj.oy * compress;
+
+      var dx = sjx - six, dy = sjy - siy;
+      var dist2D = Math.sqrt(dx*dx + dy*dy);
+      if (dist2D > maxBondDist) continue;
+
+      // Project to isometric 3D — assign a pseudo-Z from lattice row/col
+      // Use the original HCP offsets to infer Z layer
+      var zI = (si.oy / (baseR * 1.8)) * 0.5; // pseudo depth from Y position
+      var zJ = (sj.oy / (baseR * 1.8)) * 0.5;
+
+      // Apply isometric rotation
+      var x1 = cx + six + zI * Math.sin(rotY) * baseR * 0.6;
+      var y1 = cy + siy - zI * tiltZ * baseR * 0.5;
+      var x2 = cx + sjx + zJ * Math.sin(rotY) * baseR * 0.6;
+      var y2 = cy + sjy - zJ * tiltZ * baseR * 0.5;
+
+      // Bond colour: proton-proton=red, neutron-neutron=blue, mixed=white
+      // Brightens and becomes more defined as lattice locks up (sq rises)
+      var r = si.proton && sj.proton ? 255 : si.proton || sj.proton ? 220 : 100;
+      var g = si.proton && sj.proton ? 80  : 160;
+      var b = !si.proton && !sj.proton ? 255 : si.proton || sj.proton ? 160 : 80;
+      var bondAlpha = 0.15 + sq * 0.55;
+
+      // Bond gets thicker and brighter as it approaches cubic (sq→1)
+      var lineW = 0.4 + sq * 1.4;
+
+      ctx.strokeStyle = 'rgba('+r+','+g+','+b+','+bondAlpha+')';
+      ctx.lineWidth = lineW;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // Corner node — small dot at each lattice intersection
+      // Shows the cubic corner geometry forming
+      if (sq > 0.3) {
+        var nodeR = 1.2 + sq * 2.5;
+        var nodeA = sq * 0.7;
+        ctx.fillStyle = 'rgba(255,220,120,'+nodeA+')';
+        ctx.beginPath(); ctx.arc(x1, y1, nodeR, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// ===== DRAW NUCLEON =====
+function drawNucleon(x, y, r, sq, s, alpha, crackT) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  if (sq < 0.01) {
+    ctx.arc(0, 0, r, 0, Math.PI*2);
+  } else {
+    var cornerR = Math.max(1, r*(1-sq*0.88));
+    var hs = r*(0.8 + sq*0.22);
+    ctx.roundRect(-hs, -hs, hs*2, hs*2, cornerR);
+  }
+  var baseHue = s.proton ? 0 : 210;
+  var sat = 55 + sq*35;
+  var light = 30 + sq*20;
+  var grad = ctx.createRadialGradient(r*0.25, -r*0.25, 0, 0, 0, r*1.2);
+  grad.addColorStop(0, 'hsla('+baseHue+','+sat+'%,'+(light+25)+'%,'+alpha+')');
+  grad.addColorStop(0.6, 'hsla('+baseHue+','+sat+'%,'+light+'%,'+alpha+')');
+  grad.addColorStop(1, 'hsla('+baseHue+','+(sat-20)+'%,'+(light-15)+'%,'+alpha+')');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  if (sq > 0.05) {
+    ctx.strokeStyle = 'rgba(255,'+(Math.floor(200-sq*180))+','+(Math.floor(60-sq*60))+','+(sq*0.9*alpha)+')';
+    ctx.lineWidth = 1+sq*2.5;
+    ctx.stroke();
+    if (sq > 0.25) {
+      var corners = [[-1,-1],[1,-1],[1,1],[-1,1]];
+      var hs = r*(0.8+sq*0.22);
+      for (var c=0;c<4;c++) {
+        var cx2=corners[c][0]*hs*0.82, cy2=corners[c][1]*hs*0.82;
+        var stR=2+sq*8;
+        var sg=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,stR);
+        sg.addColorStop(0,'rgba(255,255,200,'+(sq*0.9*alpha)+')');
+        sg.addColorStop(0.5,'rgba(255,80,0,'+(sq*0.5*alpha)+')');
+        sg.addColorStop(1,'rgba(255,0,0,0)');
+        ctx.fillStyle=sg;
+        ctx.beginPath();ctx.arc(cx2,cy2,stR,0,Math.PI*2);ctx.fill();
+      }
+    }
+  } else {
+    ctx.strokeStyle='rgba(100,150,255,'+(0.25*alpha)+')';
+    ctx.lineWidth=0.5;
+    ctx.stroke();
+  }
+  if (crackT > 0 && crackT < 2) {
+    var hs=r*(0.8+sq*0.22);
+    ctx.strokeStyle='rgba(255,255,200,'+Math.max(0,1-crackT*0.5)+')';
+    ctx.lineWidth=1.5;
+    for (var c=0;c<4;c++) {
+      var ang=c*Math.PI/2+Math.PI/4;
+      var len=hs*0.6*Math.min(1,crackT*2);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ang)*hs*0.7,Math.sin(ang)*hs*0.7);
+      ctx.lineTo(Math.cos(ang)*(hs*0.7+len),Math.sin(ang)*(hs*0.7+len));
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ===== ELECTRON JETS =====
+function drawElectronJets(p) {
+  var pk=packPct(p);
+  if (pk < 76) return;
+  var jetStrength = Math.min(1, (pk-76)/9*1.2); // starts at 76%, full at 85%
+  var poleY = baseR*ROWS*0.52;
+  var now = Date.now()/1000;
+  for (var pole=0;pole<2;pole++) {
+    var dir=pole===0?-1:1;
+    var baseY=cy+dir*poleY*(1-p/100*0.12)*0.75;
+    for (var j=0;j<12;j++) {
+      var tt=(now*1.4+j*0.25)%2.5;
+      var jx=cx+Math.sin(tt*3.5+j*0.7)*(4+j*1.5);
+      var jy=baseY+dir*tt*90*jetStrength;
+      var ja=Math.max(0,1-tt*0.5)*jetStrength*0.75;
+      var jr=1.5+(1-tt/2.5)*3.5;
+      ctx.fillStyle='rgba(79,195,247,'+ja+')';
+      ctx.beginPath();ctx.arc(jx,jy,jr,0,Math.PI*2);ctx.fill();
+    }
+    if (jetStrength>0.25) {
+      var lx=cx,ly=cy-dir*poleY*1.15;
+      ctx.font="bold 9px 'JetBrains Mono',monospace";
+      ctx.textAlign='center';
+      ctx.fillStyle='rgba(79,195,247,'+(jetStrength*0.6)+')';
+      ctx.fillText('e⁻ POLAR JET',lx,ly);
+    }
+  }
+}
+
+// ===== GAP VISUALISATION =====
+function drawGaps(p) {
+  var pk=packPct(p);
+  var compress=1-(pk/100)*0.16;
+  var gapAlpha=Math.max(0,(85-pk)/11*0.35);
+  if (gapAlpha<0.02) return;
+  for (var i=0;i<spheres.length;i++) {
+    for (var j=i+1;j<spheres.length;j++) {
+      var dx=spheres[j].ox-spheres[i].ox, dy=spheres[j].oy-spheres[i].oy;
+      if (Math.sqrt(dx*dx+dy*dy)>baseR*2.6) continue;
+      var mx=cx+(spheres[i].ox+spheres[j].ox)/2*compress;
+      var my=cy+(spheres[i].oy+spheres[j].oy)/2*compress;
+      var gs=2.5*(1-p/100)+0.4;
+      ctx.fillStyle='rgba(50,200,255,'+gapAlpha+')';
+      ctx.beginPath();ctx.arc(mx,my,gs,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+// ===== SPIN RING AROUND LATTICE =====
+function drawSpinRing(p) {
+  var pk=packPct(p); var T=spinPeriod(pk);
+  var now=Date.now()/1000;
+  var spinSpeed=1/Math.max(0.02,T*2);
+  var ringR=baseR*ROWS*0.5+baseR*1.5;
+  var numDots=12;
+  var col=T>0.5?'rgba(168,85,247,':'rgba(239,68,68,';
+  var alpha=0.3+p/100*0.5;
+  ctx.strokeStyle=col+(alpha*0.15)+')';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.arc(cx,cy,ringR,0,Math.PI*2);
+  ctx.stroke();
+  for (var d=0;d<numDots;d++) {
+    var ang=(d/numDots)*Math.PI*2+now*spinSpeed;
+    var dx2=cx+Math.cos(ang)*ringR;
+    var dy2=cy+Math.sin(ang)*ringR;
+    var da=0.2+p/100*0.6;
+    var dr=2+p/100*2;
+    ctx.fillStyle=col+da+')';
+    ctx.beginPath();ctx.arc(dx2,dy2,dr,0,Math.PI*2);ctx.fill();
+  }
+  // Label spin speed
+  if (p>10) {
+    ctx.font="8px 'JetBrains Mono',monospace";
+    ctx.fillStyle='rgba(168,85,247,'+(0.3+p/100*0.4)+')';
+    ctx.textAlign='center';
+    ctx.fillText('ω = '+(spinSpeed).toFixed(2)+' rad/t', cx, cy-ringR-8);
+  }
+}
+
+// ===== BANG PARTICLES =====
+function triggerBang() {
+  bangPhase=1; bangT=0;
+  var n=Math.min(spheres.length, spheres.length);
+  for (var i=0;i<spheres.length;i++) {
+    spheres[i].cracked=true;
+    spheres[i].crackTime=Math.random()*0.3;
+  }
+  setTimeout(function(){
+    bangPhase=2;
+    for (var k=0;k<300;k++) {
+      var ang=Math.random()*Math.PI*2;
+      var spd=80+Math.random()*200;
+      particles.push({
+        x:cx,y:cy,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+        r:1+Math.random()*4,
+        col:'hsla('+(Math.random()*60)+',100%,'+(50+Math.random()*30)+'%,',
+        life:1.0
+      });
+    }
+  },600);
+}
+
+// ===== TRIGGER PARTICLES =====
+// Incoming particles that crash into the lattice at overpressure
+// Each zone has different particle types with different energies and frequencies
+
+function spawnTrigger(pk, now) {
+  if (bangPhase > 0) return;
+  var zone = pk < 88 ? 1 : pk < 92 ? 2 : pk < 96 ? 3 : 4;
+  // Spawn rate increases exponentially with zone
+  var spawnInterval = zone === 1 ? 4.0 : zone === 2 ? 2.2 : zone === 3 ? 1.0 : 0.35;
+  if (now - lastTriggerSpawn < spawnInterval) return;
+  lastTriggerSpawn = now;
+
+  // Random incoming angle — from outside the lattice
+  var ang = Math.random() * Math.PI * 2;
+  var startDist = Math.max(W, H) * 0.55;
+  var sx = cx + Math.cos(ang) * startDist;
+  var sy = cy + Math.sin(ang) * startDist;
+
+  // Speed: slow motion — tension building
+  var speed = zone === 1 ? 55 : zone === 2 ? 80 : zone === 3 ? 110 : 160;
+  // Direction: toward lattice centre with slight wobble
+  var targetAng = ang + Math.PI + (Math.random()-0.5)*0.3;
+  var vx = Math.cos(targetAng) * speed;
+  var vy = Math.sin(targetAng) * speed;
+
+  // Particle type per zone
+  var types = [
+    null,
+    { label: 'e⁻', col: '#4fc3f7', r: 4, trail: '#4fc3f7', name: 'STRAY ELECTRON' },
+    Math.random() > 0.5
+      ? { label: 'γ', col: '#fbbf24', r: 3, trail: '#fbbf24', name: 'STRAY PHOTON' }
+      : { label: '∿', col: '#a855f7', r: 5, trail: '#a855f7', name: 'QUANTUM FLUCTUATION' },
+    Math.random() > 0.4
+      ? { label: 'e⁻', col: '#4fc3f7', r: 4, trail: '#4fc3f7', name: 'ELECTRON' }
+      : { label: '∿', col: '#a855f7', r: 6, trail: '#a855f7', name: 'VACUUM FLUCTUATION' },
+    { label: '?', col: '#ef4444', r: 6 + Math.random()*4, trail: '#ef4444', name: 'ANYTHING' }
+  ];
+  var type = zone <= 3 ? types[zone] : types[4];
+  if (!type) type = types[1];
+
+  triggerParticles.push({
+    x: sx, y: sy, vx: vx, vy: vy,
+    trail: [], maxTrail: 28,
+    r: type.r, col: type.col, trailCol: type.trail,
+    label: type.label, name: type.name,
+    zone: zone, hit: false, hitT: 0,
+    born: now
+  });
+}
+
+function updateTriggers(dt, now) {
+  var latticeR = baseR * 5.5; // approximate radius of lattice on screen
+  for (var i = triggerParticles.length-1; i >= 0; i--) {
+    var tp = triggerParticles[i];
+    if (tp.hit) {
+      tp.hitT += dt;
+      if (tp.hitT > 2.0) { triggerParticles.splice(i,1); }
+      continue;
+    }
+    tp.trail.unshift({x: tp.x, y: tp.y});
+    if (tp.trail.length > tp.maxTrail) tp.trail.pop();
+    tp.x += tp.vx * dt;
+    tp.y += tp.vy * dt;
+    // Check if hit lattice
+    var dx = tp.x - cx, dy = tp.y - cy;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < latticeR * 0.65) {
+      tp.hit = true; tp.hitT = 0;
+      // Zone 4: triggers the bang after a tiny delay
+      if (tp.zone >= 4 && bangPhase === 0 && !bangTriggered) {
+        bangTriggered = true;
+        setTimeout(function(){ if(bangPhase===0) triggerBang(); }, 300 + Math.random()*400);
+      }
+    }
+    // Remove if gone off screen
+    if (Math.abs(tp.x-cx) > W || Math.abs(tp.y-cy) > H) {
+      triggerParticles.splice(i,1);
+    }
+  }
+}
+
+function drawTriggers() {
+  for (var i = 0; i < triggerParticles.length; i++) {
+    var tp = triggerParticles[i];
+    if (tp.hit) {
+      // Impact flash
+      var hitR = tp.r + tp.hitT * 60;
+      var hitA = Math.max(0, 0.8 - tp.hitT * 0.6);
+      var hg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, hitR);
+      hg.addColorStop(0, tp.col.replace(')', ','+hitA+')').replace('rgb','rgba').replace('#','rgba(').replace('4fc3f7','79,195,247,').replace('fbbf24','251,191,36,').replace('a855f7','168,85,247,').replace('ef4444','239,68,68,'));
+      // Simple glow
+      ctx.globalAlpha = hitA;
+      ctx.fillStyle = tp.col;
+      ctx.beginPath(); ctx.arc(tp.x, tp.y, hitR * 0.3, 0, Math.PI*2); ctx.fill();
+      // Shockwave ring
+      ctx.strokeStyle = tp.col;
+      ctx.globalAlpha = hitA * 0.6;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(tp.x, tp.y, hitR, 0, Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    // Trail
+    for (var t = 0; t < tp.trail.length; t++) {
+      var ta = (1 - t/tp.trail.length) * 0.5;
+      var tr = tp.r * (1 - t/tp.trail.length) * 0.7;
+      ctx.globalAlpha = ta;
+      ctx.fillStyle = tp.trailCol;
+      ctx.beginPath(); ctx.arc(tp.trail[t].x, tp.trail[t].y, tr, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // Particle body
+    ctx.fillStyle = tp.col;
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, tp.r, 0, Math.PI*2); ctx.fill();
+    // Glow
+    var gg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tp.r*3);
+    gg.addColorStop(0, tp.col + '88'); gg.addColorStop(1, 'transparent');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, tp.r*3, 0, Math.PI*2); ctx.fill();
+    // Label
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#fff';
+    ctx.font = "bold 10px 'JetBrains Mono',monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText(tp.label, tp.x, tp.y + tp.r + 14);
+    // Name tag on first approach
+    ctx.font = "8px 'JetBrains Mono',monospace";
+    ctx.fillStyle = tp.col;
+    ctx.fillText(tp.name, tp.x, tp.y + tp.r + 25);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== MAIN DRAW =====
+function draw(ts) {
+  var dt=Math.min(0.05,(ts-lastFrame)/1000);
+  lastFrame=ts;
+
+  // ===== PAUSE GATE =====
+  if (paused) {
+    // Frozen — just read slider for preview
+    pressure=parseFloat(document.getElementById('pressure').value);
+    var p=pressure;
+    ctx.fillStyle='rgba(4,4,12,0.82)';
+    ctx.fillRect(0,0,W,H);
+    // Draw static lattice at current pressure
+    var pk2=packPct(p), compress=1-(pk2/100)*0.16, sq=Math.max(0,(pk2-80)/20);
+    drawLatticeBonds(compress, sq, 1.0);
+    for(var i=0;i<spheres.length;i++){var s=spheres[i];drawNucleon(cx+s.ox*compress,cy+s.oy*compress,baseR*(1+p/100*0.09),sq,s,1,0);}
+    ctx.fillStyle='rgba(79,195,247,0.8)';ctx.font="bold 16px 'JetBrains Mono',monospace";ctx.textAlign='center';
+    ctx.fillText('⏸ PAUSED — drag slider to explore',cx,H-55);
+    ctx.font="11px 'JetBrains Mono',monospace";ctx.fillStyle='rgba(79,195,247,0.5)';
+    ctx.fillText(pk2.toFixed(2)+'% packing  ·  press Continue to resume',cx,H-35);
+    updateInfo(p); drawSpinGauge(p);
+    requestAnimationFrame(draw);
+    return;
+  }
+
+  // ===== ASSEMBLY PHASE =====
+  if (assemblyPhase) {
+    if (!window._assemblyStart) window._assemblyStart = performance.now()/1000;
+    updateAssembly(dt);
+    if (assemblyDone) {
+      assemblyPhase = false;
+      // Start compression automatically if in autoLoop
+      if (autoLoop) autoPlay = true;
+    }
+  }
+
+  // ===== COMPRESSION PHASE =====
+  if (autoPlay && bangPhase===0 && !assemblyPhase) {
+    // Slow start, accelerates — tension builds then sudden
+    // 3-act slow motion animation:
+    // Act 1: 0→74% in 2s = 37/s (building the stable lattice)
+    // Act 2: 74→85% in 2s = 5.5/s (the critical compression)
+    // Act 3: bang (fires at 85%)
+    // Rate: during assembly, packing = settled fraction × 74
+    // bar auto-advances as nucleons arrive — never looks frozen
+    if (assemblyPhase) {
+      var settledFrac = spheres.filter(function(s){return s.settled;}).length / Math.max(1,spheres.length);
+      pressure = settledFrac * 74;
+      document.getElementById('pressure').value = pressure;
+    } else {
+      var rate = pressure < 74 ? 37 : 5.5;
+      pressure = Math.min(100, pressure + dt*rate);
+      document.getElementById('pressure').value = pressure;
+    }
+    if (pressure>=85 && bangPhase===0 && !bangTriggered) {
+      bangTriggered=true;
+      var overshoot=pressure-85;
+      var delay=Math.max(0, 700*Math.exp(-overshoot*0.4));
+      setTimeout(function(){ if(bangPhase===0) triggerBang(); }, delay);
+    }
+    if (pressure>=100) autoPlay=false;
+  } else if (bangPhase===0 && !assemblyPhase) {
+    pressure=parseFloat(document.getElementById('pressure').value);
+  }
+
+  // ===== REPLAY COUNTDOWN =====
+  if (bangPhase===2 && autoLoop) {
+    if (replayTimer < 0) replayTimer = 4.0; // start 4s countdown after bang
+    replayTimer -= dt;
+    // Draw countdown
+    var countSecs = Math.ceil(replayTimer);
+    if (replayTimer > 0) {
+      ctx.save();
+      ctx.font = "bold 48px 'Bebas Neue',sans-serif";
+      ctx.textAlign='center';
+      ctx.fillStyle='rgba(79,195,247,0.6)';
+      ctx.fillText('REPLAYING IN ' + countSecs, cx, H-60);
+      ctx.restore();
+    }
+    if (replayTimer <= 0) {
+      doReset();
+      autoPlay=true; // start compression immediately after assembly
+    }
+  }
+
+  if (bangPhase>0) bangT+=dt;
+  var p=pressure;
+
+  ctx.fillStyle='rgba(4,4,12,0.82)';
+  ctx.fillRect(0,0,W,H);
+
+  if (bangPhase===0) {
+    var pk2=packPct(p);
+    // compress: starts at 74%, full at 100%
+    var compress=1-(pk2/100)*0.16;
+    // squareness: starts forming at 80%, full at 100%
+    var sq=Math.max(0,(pk2-80)/20);
+
+    drawSpinRing(p);
+    drawGaps(p);
+    drawLatticeBonds(compress, sq, 1.0); // Rubik lattice — behind spheres
+
+    for (var i=0;i<spheres.length;i++) {
+      var s=spheres[i];
+      var drawR=baseR*(1+p/100*0.09);
+      if (!assemblyPhase) {
+        // Post-assembly: draw at lattice positions with compression
+        var dx=cx+s.ox*compress, dy=cy+s.oy*compress;
+        drawNucleon(dx,dy,drawR,sq,s,1,0);
+      } else if (s.settled) {
+        // Settled: full nucleon at lattice position
+        var dx=cx+s.ox*compress, dy=cy+s.oy*compress;
+        drawNucleon(dx,dy,drawR,sq,s,1,0);
+        if (s.settleFlash > 0) {
+          s.settleFlash -= dt*3;
+          ctx.globalAlpha = s.settleFlash*0.5;
+          ctx.fillStyle = s.proton ? '#ff8080' : '#80c0ff';
+          ctx.beginPath(); ctx.arc(dx,dy,drawR*2,0,Math.PI*2); ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } else {
+        // Unsettled: ALL visible immediately as small incoming dots
+        // Draw at current x,y (moving toward lattice) OR at start if not yet moving
+        var px = cx + s.x, py = cy + s.y;
+        var col = s.proton ? '#ff6060' : '#60a0ff';
+        // Incoming trail — line from current pos toward centre
+        var toDist = Math.sqrt(s.x*s.x+s.y*s.y);
+        var trailLen = Math.min(baseR*4, toDist*0.3);
+        var toAng = Math.atan2(-s.y,-s.x);
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px+Math.cos(toAng)*trailLen, py+Math.sin(toAng)*trailLen);
+        ctx.stroke();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(px,py,drawR*0.45,0,Math.PI*2); ctx.fill();
+        // Glow
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.arc(px,py,drawR*1.1,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+    drawElectronJets(p);
+
+    // Pre-arrival: show incoming energy burst at centre so screen never looks frozen
+    if (assemblyPhase) {
+      var settledCount = spheres.filter(function(s){return s.settled;}).length;
+      var pct = (settledCount / spheres.length * 74).toFixed(1);
+      // Central pulse: 2 quick flashes (pulse 1 at 0.15s, pulse 2 at 0.30s)
+      // After that — nucleons arrive and it stops. No looping ring.
+      var now2 = performance.now()/1000;
+      var elapsed = now2 - (window._assemblyStart || now2);
+      for (var pi=0;pi<2;pi++) {
+        var pt2 = (pi+1)*0.15;
+        var age = elapsed - pt2;
+        if (age >= 0 && age < 0.5) {
+          var pulseR = baseR*(1.5 + age*8);
+          var pulseA = Math.max(0, 0.8 - age*1.8);
+          ctx.save();
+          ctx.globalAlpha = pulseA;
+          ctx.strokeStyle = pi===0 ? '#ff8080' : '#80c0ff';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(cx,cy,pulseR,0,Math.PI*2); ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      }
+      // Live packing readout
+      ctx.save();
+      ctx.font = "bold 13px 'JetBrains Mono',monospace";
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#22c55e';
+      ctx.fillText(pct + '% PACKED  (' + settledCount + ' nucleons)', cx, cy + baseR*ROWS*0.5 + baseR*3.5);
+      ctx.restore();
+    }
+
+    // Act label overlay
+    var actLabel = '', actCol = '#22c55e';
+    if (p < 74) {
+      actLabel = 'ACT 1 — BUILDING THE STABLE LATTICE  (0% → 74%)';
+      actCol = '#22c55e';
+    } else if (p < 85) {
+      actLabel = 'ACT 2 — CRITICAL COMPRESSION  (74% → 85%)';
+      actCol = '#f97316';
+    } else {
+      actLabel = 'ACT 3 — GEOMETRIC FAILURE  (85% — THE BANG)';
+      actCol = '#ef4444';
+    }
+    ctx.save();
+    ctx.font = "bold 10px 'JetBrains Mono',monospace";
+    ctx.textAlign = 'center';
+    ctx.fillStyle = actCol;
+    ctx.globalAlpha = 0.8;
+    ctx.fillText(actLabel, cx, H - 120);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Assembly status
+    if (assemblyPhase) {
+      var settled = spheres.filter(function(s){return s.settled;}).length;
+      ctx.save();
+      ctx.font = "bold 11px 'JetBrains Mono',monospace";
+      ctx.textAlign='center';
+      ctx.fillStyle='rgba(79,195,247,0.7)';
+      ctx.fillText('NUCLEONS ASSEMBLING — ' + settled + ' / ' + spheres.length + ' LOCKED IN', cx, cy+baseR*ROWS*0.5+baseR*7);
+      ctx.restore();
+    }
+
+    // Trigger particles — spawn and draw in overpressure zone (>85%)
+    var pk3 = packPct(p);
+    if (pk3 >= 85 && bangPhase === 0) {
+      spawnTrigger(pk3, ts/1000);
+      updateTriggers(dt, ts/1000);
+      drawTriggers();
+    }
+
+    // Packing % label
+    ctx.font="bold 13px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';
+    var pk=packPct(p);
+    var pkCol=pk<80?'#22c55e':pk<84?'#eab308':'#ef4444';
+    ctx.fillStyle=pkCol;
+    ctx.fillText(packPct(p).toFixed(2)+'% PACKED', cx, cy+baseR*ROWS*0.5+baseR*3.5);
+
+    var gp=100-pk;
+    ctx.font="9px 'JetBrains Mono',monospace";
+    ctx.fillStyle='rgba(79,195,247,0.6)';
+    ctx.fillText((100-packPct(p)).toFixed(2)+'% gap space (electron orbitals)', cx, cy+baseR*ROWS*0.5+baseR*5.2);
+
+  } else if (bangPhase===1) {
+    // Chain reaction — lattice shattering
+    var sq=1.0;
+    for (var i=0;i<spheres.length;i++) {
+      var s=spheres[i];
+      var ct=bangT-s.crackTime;
+      if (ct<0) { drawNucleon(cx+s.ox*0.84,cy+s.oy*0.84,baseR,sq,s,1,0); continue; }
+      var alpha=Math.max(0,1-ct*0.8);
+      if (alpha>0) drawNucleon(cx+s.ox*0.84,cy+s.oy*0.84,baseR*(1+ct*0.4),sq,s,alpha,ct);
+      // Crack flash
+      var glow=ctx.createRadialGradient(cx+s.ox*0.84,cy+s.oy*0.84,0,cx+s.ox*0.84,cy+s.oy*0.84,baseR*(2+ct));
+      glow.addColorStop(0,'rgba(255,220,80,'+(Math.max(0,0.7-ct*0.5))+')');
+      glow.addColorStop(1,'rgba(255,80,0,0)');
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(cx+s.ox*0.84,cy+s.oy*0.84,baseR*(2+ct),0,Math.PI*2);ctx.fill();
+    }
+
+  } else {
+    // Explosion
+    var flashR=bangT*180, flashA=Math.max(0,0.8-bangT*0.3);
+    var fg=ctx.createRadialGradient(cx,cy,0,cx,cy,flashR);
+    fg.addColorStop(0,'rgba(255,255,220,'+flashA+')');
+    fg.addColorStop(0.4,'rgba(255,120,20,'+(flashA*0.6)+')');
+    fg.addColorStop(0.8,'rgba(239,68,68,'+(flashA*0.3)+')');
+    fg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=fg;
+    ctx.beginPath();ctx.arc(cx,cy,flashR,0,Math.PI*2);ctx.fill();
+
+    for (var i=particles.length-1;i>=0;i--) {
+      var pt=particles[i];
+      pt.x+=pt.vx*dt; pt.y+=pt.vy*dt;
+      pt.vx*=0.97; pt.vy*=0.97;
+      pt.life-=dt*0.4;
+      if (pt.life<=0){particles.splice(i,1);continue;}
+      ctx.fillStyle=pt.col+pt.life+')';
+      ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*(0.5+pt.life*0.5),0,Math.PI*2);ctx.fill();
+    }
+
+    var shellR=(bangT-0.3)*130, shellA=Math.max(0,0.8-(bangT-0.3)/5);
+    if (shellA>0) {
+      ctx.strokeStyle='rgba(168,85,247,'+shellA+')';
+      ctx.lineWidth=2+shellA*4;
+      ctx.beginPath();ctx.arc(cx,cy,shellR,0,Math.PI*2);ctx.stroke();
+    }
+
+    ctx.font="bold 14px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,255,220,'+(Math.min(1,bangT-0.5)*0.8)+')';
+    ctx.fillText('NO SINGULARITY — JUST 85% PACKING', cx, cy);
+    ctx.font="10px 'JetBrains Mono',monospace";
+    ctx.fillStyle='rgba(34,197,94,'+(Math.min(1,bangT-0.8)*0.7)+')';
+    ctx.fillText('E = mc² — lattice binding energy × c²', cx, cy+20);
+    ctx.fillText('Einstein was right. God does not play dice.', cx, cy+36);
+  }
+
+  updateInfo(pressure);
+  drawSpinGauge(pressure);
+
+  requestAnimationFrame(draw);
+}
+
+// ===== CONTROLS =====
+document.getElementById('pressure').oninput = function() {
+  if (bangPhase===0) pressure=parseFloat(this.value);
+};
+function doReset() {
+  pressure=0;
+  document.getElementById('pressure').value=0;
+  bangPhase=0; bangT=0; particles=[]; bangTriggered=false;
+  triggerParticles=[]; lastTriggerSpawn=0; triggerHit=false;
+  assemblyPhase=true; assemblyDone=false; replayTimer=-1;
+  autoPlay=false; paused=false; firstRun=false;
+  window._assemblyStart=null;
+  initSpheres();
+}
+
+document.getElementById('btnAuto').onclick = function() {
+  // Continue — unpause and resume
+  paused = false;
+  autoLoop = true;
+  autoPlay = true;
+  this.textContent = '▶ Continue';
+};
+document.getElementById('btnReset').onclick = function() {
+  // Pause — freeze animation, allow slider exploration
+  paused = !paused;
+  this.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  if (paused) autoPlay = false;
+};
+document.getElementById('btnRestart').onclick = function() {
+  paused = false; autoLoop = true;
+  doReset();
+  autoPlay = true;
+  document.getElementById('btnReset').textContent = '⏸ Pause';
+};
+
+document.getElementById('btnBang').onclick = function() {
+  if (bangPhase>0) return;
+  pressure=100;
+  document.getElementById('pressure').value=100;
+  triggerBang();
+};
+
+lastFrame=performance.now();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
